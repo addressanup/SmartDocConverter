@@ -10,7 +10,22 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v3
 
+      - name: Check if project is generated
+        id: check_project
+        run: |
+          if [ -d "backend" ] && [ -f "backend/package.json" ]; then
+            echo "backend_exists=true" >> $GITHUB_OUTPUT
+          else
+            echo "backend_exists=false" >> $GITHUB_OUTPUT
+          fi
+          if [ -d "frontend" ] && [ -f "frontend/package.json" ]; then
+            echo "frontend_exists=true" >> $GITHUB_OUTPUT
+          else
+            echo "frontend_exists=false" >> $GITHUB_OUTPUT
+          fi
+
       - name: Setup Node.js
+        if: steps.check_project.outputs.backend_exists == 'true' || steps.check_project.outputs.frontend_exists == 'true'
         uses: actions/setup-node@v3
         with:
           node-version: '20'
@@ -18,12 +33,15 @@ jobs:
 
       # Backend Tests
       - name: Install backend dependencies
+        if: steps.check_project.outputs.backend_exists == 'true'
         run: cd backend && npm install
 
       - name: Run backend tests with coverage
+        if: steps.check_project.outputs.backend_exists == 'true'
         run: cd backend && npm run test -- --coverage --coverageThreshold='{"global":{"lines":80,"branches":75,"functions":75,"statements":80}}'
 
       - name: Upload backend coverage to Codecov
+        if: steps.check_project.outputs.backend_exists == 'true'
         uses: codecov/codecov-action@v3
         with:
           files: ./backend/coverage/coverage-final.json
@@ -32,12 +50,15 @@ jobs:
 
       # Frontend Tests
       - name: Install frontend dependencies
+        if: steps.check_project.outputs.frontend_exists == 'true'
         run: cd frontend && npm install
 
       - name: Run frontend tests with coverage
+        if: steps.check_project.outputs.frontend_exists == 'true'
         run: cd frontend && npm run test -- --coverage --coverage.lines=75 --coverage.functions=70 --coverage.branches=70 --coverage.statements=75
 
       - name: Upload frontend coverage to Codecov
+        if: steps.check_project.outputs.frontend_exists == 'true'
         uses: codecov/codecov-action@v3
         with:
           files: ./frontend/coverage/coverage-final.json
@@ -46,13 +67,59 @@ jobs:
 
       # Quality Checks
       - name: Lint backend
+        if: steps.check_project.outputs.backend_exists == 'true'
         run: cd backend && npm run lint || echo "Linting not configured yet"
 
       - name: Lint frontend
+        if: steps.check_project.outputs.frontend_exists == 'true'
         run: cd frontend && npm run lint || echo "Linting not configured yet"
 
       - name: TypeScript check backend
+        if: steps.check_project.outputs.backend_exists == 'true'
         run: cd backend && npx tsc --noEmit || echo "TypeScript not configured yet"
 
       - name: TypeScript check frontend
+        if: steps.check_project.outputs.frontend_exists == 'true'
         run: cd frontend && npx tsc --noEmit || echo "TypeScript not configured yet"
+
+      # Template validation (runs when project code doesn't exist yet)
+      - name: Validate template structure
+        if: steps.check_project.outputs.backend_exists == 'false' && steps.check_project.outputs.frontend_exists == 'false'
+        run: |
+          echo "✅ This is a template repository - no application code to test yet"
+          echo "📋 Validating template structure..."
+
+          # Check required template files
+          required_files=(
+            "orchestrator.py"
+            "database.py"
+            "phase_validators.py"
+            "project-description.yaml"
+            "sample-project-description.yaml"
+            "README.md"
+            "SETUP.md"
+          )
+
+          for file in "${required_files[@]}"; do
+            if [ -f "$file" ]; then
+              echo "✓ $file exists"
+            else
+              echo "✗ $file missing"
+              exit 1
+            fi
+          done
+
+          # Check agent directories
+          agents=("architect" "planner" "backend" "frontend" "qa" "devops" "docs")
+          for agent in "${agents[@]}"; do
+            if [ -d "agents/$agent" ] && [ -f "agents/$agent/system_prompt.md" ]; then
+              echo "✓ agents/$agent/system_prompt.md exists"
+            else
+              echo "✗ agents/$agent/system_prompt.md missing"
+              exit 1
+            fi
+          done
+
+          echo ""
+          echo "✅ Template structure validation passed!"
+          echo "ℹ️  Once agents generate backend/frontend code, CI will run full test suite"
