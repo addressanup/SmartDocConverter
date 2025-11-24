@@ -1,0 +1,759 @@
+# ==============================================================================
+# SAMPLE PROJECT DESCRIPTION
+# ==============================================================================
+# This file defines your entire project for the Multi-Agent Development System.
+# Agents (Architect, Planner, Backend, Frontend, QA, DevOps, Docs) read this
+# file to understand what to build.
+#
+# INSTRUCTIONS:
+# 1. Copy this file to "project-description.yaml" in your project root
+# 2. Customize all sections for your specific project
+# 3. Be as detailed as possible - agents use this as their source of truth
+# 4. Run: python orchestrator.py --init to start the workflow
+#
+# EXAMPLE PROJECT: Task Management & Team Collaboration Platform
+# ==============================================================================
+
+# ------------------------------------------------------------------------------
+# PROJECT METADATA
+# ------------------------------------------------------------------------------
+# Basic information about your project
+project_metadata:
+  name: "TaskFlow Pro"
+  version: "1.0.0"
+  description: |
+    A modern task management and team collaboration platform with real-time
+    updates, project tracking, time logging, and team communication features.
+    Designed for small to medium-sized teams (5-50 members).
+
+  # Optional: Project type helps agents understand context
+  project_type: "SaaS Web Application"
+
+  # Optional: Target audience
+  target_audience: "Small to medium businesses, remote teams, project managers"
+
+  # Optional: Business model
+  business_model: "Freemium (Free tier + Premium subscription at $10/user/month)"
+
+# ------------------------------------------------------------------------------
+# TECHNOLOGY STACK
+# ------------------------------------------------------------------------------
+# Complete specification of all technologies to be used.
+# Agents use this to make consistent technology choices throughout the project.
+#
+# IMPORTANT: Be specific! Avoid ambiguity like "Redux/Zustand" - pick one.
+# ------------------------------------------------------------------------------
+
+tech_stack:
+  # ----------------------------------------------------------------------------
+  # BACKEND STACK
+  # ----------------------------------------------------------------------------
+  backend_runtime: "Node.js 20 LTS"
+  backend_framework: "Express.js 4.x"
+  backend_language: "TypeScript 5.x"
+  backend_testing: "Jest 29.x"
+
+  # API Standards
+  api_style: "RESTful"  # Options: RESTful, GraphQL, gRPC, tRPC
+  api_versioning: "URL-based (/api/v1/)"
+
+  # Authentication & Authorization
+  auth_strategy: "JWT (Access + Refresh tokens)"
+  auth_provider: "Custom (email/password + OAuth2 Google)"
+  session_management: "JWT in httpOnly cookies + Redis session store"
+
+  # ----------------------------------------------------------------------------
+  # FRONTEND STACK
+  # ----------------------------------------------------------------------------
+  frontend_framework: "React 18"
+  frontend_language: "TypeScript 5.x"
+  frontend_build_tool: "Vite 5.x"
+  frontend_router: "React Router 6.x"
+  frontend_css_framework: "Tailwind CSS 3.4"
+  frontend_ui_library: "shadcn/ui (Radix UI primitives + Tailwind)"
+  frontend_state_management: "Zustand 4.x"
+  frontend_data_fetching: "TanStack Query (React Query) 5.x"
+  frontend_form_handling: "React Hook Form + Zod validation"
+  frontend_testing: "Vitest + React Testing Library"
+
+  # Real-time Communication
+  realtime_framework: "Socket.io 4.x"
+  realtime_use_cases: "Task updates, team chat, notifications"
+
+  # ----------------------------------------------------------------------------
+  # DATABASE & DATA LAYER
+  # ----------------------------------------------------------------------------
+  database_system: "PostgreSQL 16"
+  orm: "Prisma 5.x"
+
+  # Caching Strategy
+  caching: "Redis 7.x"
+  cache_strategy: "Cache-aside pattern for user sessions, API responses"
+  cache_ttl: "User data: 15min, Static data: 1hr"
+
+  # Queue System (for async tasks)
+  queue_system: "BullMQ (Redis-based)"
+  queue_use_cases: "Email sending, report generation, data exports"
+
+  # ----------------------------------------------------------------------------
+  # THIRD-PARTY SERVICES
+  # ----------------------------------------------------------------------------
+  file_storage: "AWS S3 (or MinIO for local development)"
+  file_storage_use_cases: "User avatars, file attachments (up to 10MB)"
+
+  email_service: "SendGrid"
+  email_use_cases: "Transactional emails (welcome, password reset, notifications)"
+
+  payment_gateway: "Stripe"
+  payment_use_cases: "Premium subscriptions, billing management"
+
+  oauth_providers:
+    - "Google OAuth 2.0"
+    # Future: "GitHub OAuth 2.0", "Microsoft Azure AD"
+
+  # ----------------------------------------------------------------------------
+  # OBSERVABILITY & MONITORING
+  # ----------------------------------------------------------------------------
+  observability:
+    logging: "Pino (structured JSON logging)"
+    log_levels: "dev: debug, staging: info, prod: warn"
+
+    metrics: "Prometheus + Grafana"
+    metrics_collected: "Request latency, error rates, active users, DB connections"
+
+    error_tracking: "Sentry"
+    error_sampling: "100% in prod"
+
+    apm: "OpenTelemetry (optional for distributed tracing)"
+
+    uptime_monitoring: "UptimeRobot (external ping every 5min)"
+
+  # ----------------------------------------------------------------------------
+  # INFRASTRUCTURE & DEVOPS
+  # ----------------------------------------------------------------------------
+  infrastructure:
+    containerization: "Docker + Docker Compose"
+
+    ci_cd: "GitHub Actions"
+    ci_cd_stages:
+      - "Lint & Type Check"
+      - "Unit Tests (80% coverage required)"
+      - "Integration Tests"
+      - "Build Docker Images"
+      - "Deploy to Staging (auto)"
+      - "Deploy to Production (manual approval)"
+
+    deployment_target: "Google Cloud Run (production), Render.com (staging)"
+    deployment_strategy: "Blue-green deployment with health checks"
+
+    iac: "Terraform (optional - for advanced cloud resource management)"
+
+    secrets_management: "Google Secret Manager (prod), .env files (local)"
+
+    cdn: "Cloudflare (for static assets, DDoS protection)"
+
+  # ----------------------------------------------------------------------------
+  # TESTING STACK
+  # ----------------------------------------------------------------------------
+  unit_testing: "Jest (backend), Vitest (frontend)"
+  integration_testing: "Supertest (API), Playwright (frontend)"
+  e2e_testing: "Playwright"
+  load_testing: "k6 (for performance testing)"
+  security_testing: "OWASP ZAP (for vulnerability scanning)"
+
+  # ----------------------------------------------------------------------------
+  # DOCUMENTATION
+  # ----------------------------------------------------------------------------
+  api_documentation: "OpenAPI 3.0 + Redoc (auto-generated from code)"
+  code_documentation: "TSDoc comments + TypeDoc (for generating docs)"
+  architecture_diagrams: "Mermaid diagrams in Markdown"
+
+# ------------------------------------------------------------------------------
+# FEATURES
+# ------------------------------------------------------------------------------
+# List all features to be built. Each feature becomes a set of tasks for agents.
+#
+# FIELDS:
+#   - id: Unique identifier (used in dependencies)
+#   - name: Human-readable feature name
+#   - description: Detailed description of what this feature does
+#   - priority: 1 (critical), 2 (high), 3 (medium), 4 (low)
+#   - dependencies: List of feature IDs that must be completed first
+#   - estimated_days: Rough estimate for planning (1 developer)
+#   - acceptance_criteria: List of conditions that must be met
+# ------------------------------------------------------------------------------
+
+features:
+  # PHASE 1: Core Authentication & User Management
+  - id: "auth"
+    name: "User Authentication & Authorization"
+    description: |
+      Complete user authentication system with email/password and Google OAuth.
+      Includes registration, login, logout, password reset, email verification,
+      and JWT-based session management.
+    priority: 1
+    dependencies: []
+    estimated_days: 5
+    acceptance_criteria:
+      - "Users can register with email/password"
+      - "Users can log in with email/password or Google OAuth"
+      - "JWT tokens stored in httpOnly cookies"
+      - "Password reset via email works"
+      - "Email verification required for new accounts"
+      - "Session management with refresh tokens"
+      - "Rate limiting on auth endpoints (5 attempts per 15min)"
+
+  - id: "user-profile"
+    name: "User Profile Management"
+    description: |
+      User profile pages with avatar upload, bio, timezone, notification
+      preferences, and account settings.
+    priority: 1
+    dependencies: ["auth"]
+    estimated_days: 3
+    acceptance_criteria:
+      - "Users can view and edit their profile"
+      - "Avatar upload to S3 (max 2MB, jpg/png only)"
+      - "Timezone selection for date/time display"
+      - "Email notification preferences"
+      - "Account deletion with confirmation"
+
+  # PHASE 2: Core Task Management
+  - id: "workspaces"
+    name: "Workspaces (Teams)"
+    description: |
+      Multi-tenant workspace system. Users can create/join workspaces,
+      invite members, manage roles (Owner, Admin, Member, Guest).
+    priority: 2
+    dependencies: ["auth"]
+    estimated_days: 4
+    acceptance_criteria:
+      - "Users can create workspaces"
+      - "Workspace owners can invite members via email"
+      - "Role-based permissions (Owner, Admin, Member, Guest)"
+      - "Users can switch between workspaces"
+      - "Workspace settings (name, logo, billing)"
+
+  - id: "projects"
+    name: "Projects & Boards"
+    description: |
+      Kanban-style project boards within workspaces. Supports multiple
+      views: Board, List, Timeline (Gantt-like).
+    priority: 2
+    dependencies: ["workspaces"]
+    estimated_days: 5
+    acceptance_criteria:
+      - "Create projects within workspaces"
+      - "Kanban board view with drag-and-drop"
+      - "List view (table format)"
+      - "Timeline view (Gantt chart)"
+      - "Project templates (empty, sprint, marketing campaign)"
+      - "Archive/unarchive projects"
+
+  - id: "tasks"
+    name: "Task Management"
+    description: |
+      Core task CRUD with rich details: title, description, assignee,
+      due date, priority, labels, attachments, checklists, time estimates.
+    priority: 2
+    dependencies: ["projects"]
+    estimated_days: 6
+    acceptance_criteria:
+      - "Create/edit/delete tasks"
+      - "Assign tasks to workspace members"
+      - "Set due dates with reminders"
+      - "Priority levels (High, Medium, Low)"
+      - "Custom labels (color-coded)"
+      - "File attachments (up to 10MB per file)"
+      - "Checklists within tasks"
+      - "Time estimates and time tracking"
+      - "Task comments with mentions (@username)"
+
+  - id: "realtime-updates"
+    name: "Real-time Collaboration"
+    description: |
+      WebSocket-based real-time updates. See live changes when teammates
+      move tasks, add comments, or update fields.
+    priority: 2
+    dependencies: ["tasks"]
+    estimated_days: 4
+    acceptance_criteria:
+      - "Live task updates across all connected clients"
+      - "Presence indicators (who's online)"
+      - "Typing indicators in comments"
+      - "Notification badges for new activity"
+      - "Graceful fallback if WebSocket disconnects"
+
+  # PHASE 3: Enhanced Features
+  - id: "search"
+    name: "Global Search"
+    description: |
+      Full-text search across tasks, projects, comments, and users.
+      Advanced filters (assignee, date range, labels, priority).
+    priority: 3
+    dependencies: ["tasks"]
+    estimated_days: 4
+    acceptance_criteria:
+      - "Search bar in navbar (keyboard shortcut Cmd+K)"
+      - "Full-text search with highlights"
+      - "Filter by assignee, labels, due date, priority"
+      - "Search within specific workspace/project"
+      - "Recent searches saved"
+      - "Search results show context snippets"
+
+  - id: "notifications"
+    name: "Notification System"
+    description: |
+      In-app and email notifications for task assignments, mentions,
+      due dates, and comments. User-configurable preferences.
+    priority: 3
+    dependencies: ["tasks"]
+    estimated_days: 4
+    acceptance_criteria:
+      - "In-app notification center"
+      - "Real-time notifications via WebSocket"
+      - "Email notifications (digest or instant)"
+      - "Notification preferences per workspace"
+      - "Mark as read/unread"
+      - "Notification types: assigned, mentioned, due soon, overdue"
+
+  - id: "time-tracking"
+    name: "Time Tracking & Reporting"
+    description: |
+      Track time spent on tasks with start/stop timer. Generate time
+      reports by user, project, or date range.
+    priority: 3
+    dependencies: ["tasks"]
+    estimated_days: 5
+    acceptance_criteria:
+      - "Start/stop timer for any task"
+      - "Manual time entry (e.g., '2h 30m')"
+      - "Time log history per task"
+      - "Weekly/monthly time reports"
+      - "Export time reports to CSV"
+      - "Billable vs non-billable time tracking"
+
+  - id: "integrations"
+    name: "Third-Party Integrations"
+    description: |
+      Connect with external tools: Slack (notifications), Google Calendar
+      (sync due dates), GitHub (link issues).
+    priority: 4
+    dependencies: ["tasks"]
+    estimated_days: 6
+    acceptance_criteria:
+      - "Slack integration: post task updates to channels"
+      - "Google Calendar sync: tasks with due dates"
+      - "GitHub integration: link tasks to issues/PRs"
+      - "Webhook support for custom integrations"
+      - "OAuth flows for third-party auth"
+
+  - id: "premium-billing"
+    name: "Premium Subscription & Billing"
+    description: |
+      Stripe integration for premium subscriptions. Free tier (1 workspace,
+      10 users), Premium tier ($10/user/month, unlimited).
+    priority: 3
+    dependencies: ["workspaces"]
+    estimated_days: 5
+    acceptance_criteria:
+      - "Free tier limits enforced (1 workspace, 10 users)"
+      - "Premium tier pricing page"
+      - "Stripe Checkout integration"
+      - "Subscription management (upgrade, downgrade, cancel)"
+      - "Usage-based billing (per user)"
+      - "Invoice generation and email"
+      - "Grace period for failed payments (7 days)"
+
+# ------------------------------------------------------------------------------
+# NON-FUNCTIONAL REQUIREMENTS
+# ------------------------------------------------------------------------------
+# Performance, security, and quality standards that all features must meet.
+# ------------------------------------------------------------------------------
+
+requirements:
+  # Performance Requirements
+  performance:
+    api_response_time: "< 200ms (p95), < 500ms (p99)"
+    frontend_page_load: "< 3 seconds (initial load), < 1 second (navigation)"
+    database_query_time: "< 100ms (p95)"
+    realtime_latency: "< 500ms (WebSocket message delivery)"
+    max_concurrent_users: "1,000 per instance"
+
+  # Security Requirements
+  security:
+    https_only: true
+    hsts_enabled: true
+    cors_policy: "Whitelist frontend domains only"
+
+    password_minimum: 12
+    password_requirements: "At least 1 uppercase, 1 lowercase, 1 number, 1 special char"
+    password_hashing: "bcrypt (cost factor: 12)"
+
+    rate_limiting:
+      auth_endpoints: "5 requests per 15 minutes per IP"
+      api_endpoints: "100 requests per minute per user"
+      file_uploads: "10 requests per hour per user"
+
+    input_validation: "Strict validation with Zod schemas on all inputs"
+    sql_injection_prevention: "Prisma ORM (parameterized queries only)"
+    xss_prevention: "Content Security Policy + output encoding"
+    csrf_protection: "CSRF tokens on all state-changing requests"
+
+    owasp_compliance: "Follow OWASP Top 10 guidelines"
+
+    data_encryption:
+      at_rest: "AWS S3 server-side encryption (AES-256)"
+      in_transit: "TLS 1.3 only"
+
+    secrets_rotation: "JWT secrets rotated every 90 days"
+
+  # Testing Requirements
+  testing:
+    backend_coverage: ">= 80% (lines, branches, functions, statements)"
+    frontend_coverage: ">= 75% (lines, branches, functions, statements)"
+
+    test_types_required:
+      - "Unit tests (all business logic)"
+      - "Integration tests (API endpoints)"
+      - "E2E tests (critical user flows)"
+      - "Performance tests (k6 for load testing)"
+      - "Security tests (OWASP ZAP scans)"
+
+    critical_user_flows_for_e2e:
+      - "User registration and login"
+      - "Create workspace and invite member"
+      - "Create project and add tasks"
+      - "Drag-and-drop task between columns"
+      - "Real-time collaboration (two users)"
+      - "Upgrade to premium subscription"
+
+  # Accessibility Requirements
+  accessibility:
+    wcag_level: "WCAG 2.1 AA compliance"
+    keyboard_navigation: "All features accessible via keyboard"
+    screen_reader: "ARIA labels on all interactive elements"
+    color_contrast: "Minimum 4.5:1 for text, 3:1 for UI components"
+
+  # Browser Support
+  browser_support:
+    - "Chrome 120+ (last 2 versions)"
+    - "Firefox 120+ (last 2 versions)"
+    - "Safari 17+ (last 2 versions)"
+    - "Edge 120+ (last 2 versions)"
+    - "No IE11 support"
+
+  # Mobile Support
+  mobile_support: "Responsive design (768px+), mobile app out of scope"
+
+  # Internationalization
+  i18n:
+    initial_languages: ["en-US"]
+    future_languages: ["es-ES", "fr-FR", "de-DE"]
+    i18n_framework: "i18next (for frontend), accept-language (for backend)"
+
+  # Data Retention & Backup
+  data_retention:
+    user_data: "Retained indefinitely until account deletion"
+    deleted_data: "Soft-deleted for 30 days, then hard-deleted"
+    backups: "Daily automated backups, retained for 30 days"
+    backup_testing: "Monthly restore tests"
+
+# ------------------------------------------------------------------------------
+# PROJECT CONSTRAINTS
+# ------------------------------------------------------------------------------
+# Practical limitations and boundaries for the project.
+# ------------------------------------------------------------------------------
+
+constraints:
+  # Timeline
+  timeline_days: 60
+  timeline_breakdown:
+    phase_1_analysis: 5
+    phase_2_implementation: 35
+    phase_3_testing: 10
+    phase_4_deployment: 5
+    phase_5_documentation: 5
+
+  # Team
+  team_size: 1  # Solo developer (you + AI agents)
+
+  # Budget (for SaaS services)
+  monthly_budget:
+    aws_s3: "$10 (1TB storage + transfer)"
+    sendgrid: "$15 (40,000 emails/month)"
+    sentry: "$26 (Team plan)"
+    render_staging: "$7 (for staging environment)"
+    cloudflare: "$0 (Free plan)"
+    total: "$58/month"
+
+  # Technical Constraints
+  technical_constraints:
+    max_file_upload_size: "10MB per file"
+    max_files_per_task: 20
+    max_users_per_workspace_free: 10
+    max_users_per_workspace_premium: 500
+    max_tasks_per_project: 10000
+    max_projects_per_workspace: 100
+    session_timeout: "7 days (with refresh token)"
+
+  # Out of Scope (v1.0)
+  out_of_scope:
+    - "Native mobile apps (iOS/Android)"
+    - "Desktop apps (Electron)"
+    - "Video calling / screen sharing"
+    - "AI-powered features (task suggestions, automation)"
+    - "Advanced analytics / business intelligence"
+    - "White-label / self-hosted options"
+    - "SAML / Enterprise SSO"
+
+# ------------------------------------------------------------------------------
+# DEPLOYMENT CONFIGURATION
+# ------------------------------------------------------------------------------
+# Environment-specific configuration for development, staging, and production.
+# ------------------------------------------------------------------------------
+
+deployment:
+  # Local Development
+  development:
+    target: "Local Docker Compose"
+    backend_port: 3000
+    frontend_port: 3001
+    database_port: 5432
+    redis_port: 6379
+    hot_reload: true
+    debug_mode: true
+    seed_data: true  # Populate DB with test data
+
+  # Staging Environment
+  staging:
+    target: "Render.com Web Service"
+    url: "https://taskflow-staging.onrender.com"
+    backend_replicas: 1
+    database: "Render PostgreSQL"
+    redis: "Render Redis"
+    env_vars_source: "Render Environment Variables"
+    auto_deploy: true  # Deploy on every push to 'develop' branch
+
+  # Production Environment
+  production:
+    target: "Google Cloud Run"
+    url: "https://taskflow.app"
+    backend_replicas: 3  # Auto-scaling 3-10 instances
+    database: "Google Cloud SQL (PostgreSQL)"
+    redis: "Google Cloud Memorystore"
+    cdn: "Cloudflare"
+    env_vars_source: "Google Secret Manager"
+    auto_deploy: false  # Manual approval required
+    health_check_endpoint: "/api/v1/health"
+    deployment_strategy: "Blue-green with 5-minute canary"
+
+# ------------------------------------------------------------------------------
+# API DESIGN GUIDELINES
+# ------------------------------------------------------------------------------
+# Standards for API design that the Backend agent should follow.
+# ------------------------------------------------------------------------------
+
+api_design:
+  base_url: "/api/v1"
+
+  authentication: "Bearer token in Authorization header"
+
+  response_format: "JSON with consistent structure"
+  success_response_example: |
+    {
+      "success": true,
+      "data": { ... },
+      "meta": { "timestamp": "2025-01-15T10:30:00Z" }
+    }
+  error_response_example: |
+    {
+      "success": false,
+      "error": {
+        "code": "VALIDATION_ERROR",
+        "message": "Invalid input data",
+        "details": [
+          { "field": "email", "message": "Invalid email format" }
+        ]
+      },
+      "meta": { "timestamp": "2025-01-15T10:30:00Z", "request_id": "abc123" }
+    }
+
+  http_status_codes:
+    - "200 OK - Successful GET/PUT/PATCH"
+    - "201 Created - Successful POST"
+    - "204 No Content - Successful DELETE"
+    - "400 Bad Request - Validation errors"
+    - "401 Unauthorized - Missing/invalid token"
+    - "403 Forbidden - Insufficient permissions"
+    - "404 Not Found - Resource not found"
+    - "409 Conflict - Resource already exists"
+    - "429 Too Many Requests - Rate limit exceeded"
+    - "500 Internal Server Error - Unexpected error"
+
+  pagination:
+    method: "Cursor-based pagination"
+    query_params: "?cursor=abc123&limit=20"
+    default_limit: 20
+    max_limit: 100
+
+  filtering:
+    method: "Query parameters"
+    example: "?assignee=user123&priority=high&status=in_progress"
+
+  sorting:
+    method: "Query parameter"
+    example: "?sort=-created_at,+title"  # - for DESC, + for ASC
+
+  versioning:
+    method: "URL-based (/api/v1/, /api/v2/)"
+    deprecation_policy: "v1 supported for 6 months after v2 release"
+
+# ------------------------------------------------------------------------------
+# DATABASE DESIGN GUIDELINES
+# ------------------------------------------------------------------------------
+# Standards for database schema that the Architect agent should follow.
+# ------------------------------------------------------------------------------
+
+database_design:
+  naming_conventions:
+    tables: "Plural lowercase (users, tasks, workspaces)"
+    columns: "Snake_case (created_at, user_id)"
+    primary_keys: "id (UUID or auto-increment)"
+    foreign_keys: "{table_singular}_id (user_id, workspace_id)"
+
+  required_columns_all_tables:
+    - "id (primary key)"
+    - "created_at (timestamp, default: now())"
+    - "updated_at (timestamp, auto-update)"
+
+  soft_deletes: "Use deleted_at column (nullable timestamp)"
+
+  indexes:
+    - "All foreign keys"
+    - "Frequently queried columns (email, slug)"
+    - "Columns used in WHERE/ORDER BY clauses"
+
+  constraints:
+    - "NOT NULL for required fields"
+    - "UNIQUE for unique identifiers (email, slug)"
+    - "CHECK constraints for enums/ranges"
+    - "ON DELETE CASCADE/SET NULL as appropriate"
+
+  data_types:
+    ids: "UUID (more secure) or BIGINT (auto-increment)"
+    timestamps: "TIMESTAMP WITH TIME ZONE"
+    money: "DECIMAL(10,2) - store in cents"
+    text: "VARCHAR(n) for limited length, TEXT for unlimited"
+
+# ------------------------------------------------------------------------------
+# FRONTEND DESIGN GUIDELINES
+# ------------------------------------------------------------------------------
+# Standards for UI/UX that the Frontend agent should follow.
+# ------------------------------------------------------------------------------
+
+frontend_design:
+  design_system: "shadcn/ui + Tailwind CSS"
+
+  color_palette:
+    primary: "#3B82F6 (blue-500)"  # Brand color
+    secondary: "#8B5CF6 (violet-500)"
+    accent: "#10B981 (green-500)"
+    neutral: "#64748B (slate-500)"
+    error: "#EF4444 (red-500)"
+    warning: "#F59E0B (amber-500)"
+    success: "#10B981 (green-500)"
+
+  typography:
+    font_family: "Inter (sans-serif)"
+    headings: "font-semibold"
+    body: "font-normal"
+    scale: "text-sm (14px), text-base (16px), text-lg (18px), text-xl (20px)"
+
+  spacing: "Tailwind default scale (4px increments)"
+
+  responsive_breakpoints:
+    sm: "640px"
+    md: "768px"
+    lg: "1024px"
+    xl: "1280px"
+
+  component_patterns:
+    buttons: "Primary (filled), Secondary (outline), Ghost (text-only)"
+    forms: "Floating labels, inline validation errors"
+    modals: "Centered overlay with backdrop"
+    toasts: "Top-right notifications, auto-dismiss in 5s"
+    tables: "Sortable headers, row hover states, sticky headers"
+
+  loading_states:
+    initial_page_load: "Full-page spinner"
+    data_fetching: "Skeleton screens"
+    button_actions: "Spinner on button + disabled state"
+
+  empty_states: "Helpful message + primary action button"
+
+  error_states: "User-friendly error message + retry button"
+
+# ------------------------------------------------------------------------------
+# NOTES FOR AGENTS
+# ------------------------------------------------------------------------------
+# Additional context and guidance for AI agents processing this file.
+# ------------------------------------------------------------------------------
+
+notes_for_agents:
+  architect:
+    - "Create complete OpenAPI 3.0 spec with all endpoints from features"
+    - "Design Prisma schema with proper relations and indexes"
+    - "Use provided API and database design guidelines"
+    - "Document all architecture decisions in ADRs"
+
+  planner:
+    - "Break features into 20-30 specific todos"
+    - "Estimate 3-5 days per feature on average"
+    - "Account for testing time (20% of implementation time)"
+    - "Consider dependencies when sequencing tasks"
+
+  backend:
+    - "Follow RESTful API conventions strictly"
+    - "Implement all OWASP security measures"
+    - "Write unit tests for all business logic (80%+ coverage)"
+    - "Use Prisma migrations for all schema changes"
+    - "Implement rate limiting on all endpoints"
+
+  frontend:
+    - "Build responsive layouts (mobile-first approach)"
+    - "Implement proper loading and error states"
+    - "Use React Hook Form for all forms with Zod validation"
+    - "Optimize bundle size (code splitting, lazy loading)"
+    - "Write tests for all user interactions"
+
+  qa:
+    - "Use test design methodologies (BVA, EP, State Transition)"
+    - "Cover all critical user flows with E2E tests"
+    - "Run OWASP ZAP security scans"
+    - "Perform k6 load tests (target: 1000 concurrent users)"
+    - "Verify WCAG 2.1 AA compliance"
+
+  devops:
+    - "Create multi-stage Dockerfile (builder + runtime)"
+    - "Configure GitHub Actions with test coverage enforcement"
+    - "Set up staging environment for automated deploys"
+    - "Document all environment variables in .env.example"
+    - "Implement health check endpoints"
+
+  docs:
+    - "Generate API docs from OpenAPI spec"
+    - "Create architecture diagrams (C4 model)"
+    - "Write setup guide for local development"
+    - "Document deployment process step-by-step"
+    - "Include troubleshooting section"
+
+# ==============================================================================
+# END OF SAMPLE PROJECT DESCRIPTION
+# ==============================================================================
+# This is a comprehensive example. Your project may be simpler or more complex.
+# Adjust as needed, but always be as specific as possible - clarity helps agents
+# make better decisions and reduces ambiguity.
+#
+# For questions or issues, see: README.md or agents/*/system_prompt.md
+# ==============================================================================

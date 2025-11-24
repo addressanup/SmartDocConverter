@@ -1,0 +1,386 @@
+# System Architecture - E-Commerce Platform
+
+**Version**: 1.0.0
+**Last Updated**: 2024-01-15
+**Status**: Initial Design
+
+---
+
+## Executive Summary
+
+This document outlines the architecture for a full-stack e-commerce platform with user authentication, product catalog management, and order processing. The system is designed for scalability, maintainability, and security.
+
+**Key Decisions**:
+- Monolithic backend (Express.js) for faster initial development
+- React SPA frontend for rich user experience
+- PostgreSQL for ACID transactions (critical for orders/payments)
+- Redis for session storage and caching
+- Microservices architecture deferred to v2.0 (when needed)
+
+---
+
+## System Context Diagram (C4 Level 1)
+
+```
+┌─────────────┐
+│   Customer  │
+└──────┬──────┘
+       │ HTTPS
+       ▼
+┌─────────────────────┐
+│  Web Application    │◄──── Load Balancer
+│  (React SPA)        │
+└──────┬──────────────┘
+       │ REST API
+       ▼
+┌─────────────────────┐
+│  Backend API        │
+│  (Express.js)       │
+└──┬────────┬─────┬───┘
+   │        │     │
+   ▼        ▼     ▼
+┌──────┐ ┌────┐ ┌─────────┐
+│ PG   │ │Redis│ │ Stripe  │
+│ SQL  │ │     │ │ API     │
+└──────┘ └────┘ └─────────┘
+```
+
+---
+
+## Container Diagram (C4 Level 2)
+
+### Frontend Container
+**Technology**: React 18 + Vite
+**Responsibilities**:
+- User interface rendering
+- Client-side routing
+- Form validation
+- State management (Zustand + TanStack Query)
+- API communication
+
+**Key Components**:
+- `src/components/Auth/` - Login, Register, Profile
+- `src/components/Products/` - Product List, Product Detail
+- `src/components/Cart/` - Shopping Cart
+- `src/components/Checkout/` - Order placement
+- `src/api/` - API client layer
+- `src/store/` - Global state management
+
+### Backend Container
+**Technology**: Node.js 20 + Express.js + TypeScript
+**Responsibilities**:
+- Business logic execution
+- Data validation
+- Authentication & authorization (JWT)
+- Database operations
+- External API integration (Stripe, SendGrid)
+
+**Key Modules**:
+```
+backend/src/
+├── routes/          # API endpoints
+│   ├── auth.ts      # /api/auth/*
+│   ├── products.ts  # /api/products/*
+│   └── orders.ts    # /api/orders/*
+├── services/        # Business logic
+│   ├── authService.ts
+│   ├── productService.ts
+│   └── orderService.ts
+├── middleware/      # Express middleware
+│   ├── auth.ts      # JWT verification
+│   ├── validation.ts
+│   └── errorHandler.ts
+├── models/          # Database models (Prisma)
+└── utils/           # Helpers
+```
+
+### Database Container
+**Technology**: PostgreSQL 16
+**Purpose**: Primary data store
+
+**Schema Summary**:
+- `users` - User accounts
+- `products` - Product catalog
+- `orders` - Order headers
+- `order_items` - Order line items
+- `sessions` - User sessions (alternative: Redis)
+
+### Cache Container
+**Technology**: Redis 7
+**Purpose**:
+- Session storage (primary)
+- Product catalog cache (TTL: 5 minutes)
+- Rate limiting counters
+- Background job queue (BullMQ)
+
+---
+
+## Component Diagram (Key Flows)
+
+### Authentication Flow
+```
+[Client] ─POST /api/auth/login─> [AuthController]
+                                        │
+                                        ▼
+                                  [AuthService]
+                                        │
+                                        ├─> [UserRepository] ─> [PostgreSQL]
+                                        ├─> [bcrypt] (password verify)
+                                        └─> [JWT] (token generation)
+                                        │
+                                        ▼
+                                  [JWT Token] ───> [Client]
+```
+
+### Order Placement Flow
+```
+[Client] ─POST /api/orders─> [OrderController]
+                                    │
+                                    ▼
+                              [OrderService]
+                                    │
+                                    ├─> Validate inventory
+                                    ├─> Calculate total
+                                    ├─> [Stripe API] - Create Payment Intent
+                                    ├─> [Transaction Begin]
+                                    ├─> Create Order
+                                    ├─> Create Order Items
+                                    ├─> Decrement Inventory
+                                    ├─> [Transaction Commit]
+                                    ├─> [SendGrid] - Send confirmation email
+                                    └─> [BullMQ] - Queue fulfillment job
+                                    │
+                                    ▼
+                              [Order Confirmation]
+```
+
+---
+
+## Technology Stack Rationale
+
+### Backend: Node.js + Express.js
+**Why**:
+- JavaScript/TypeScript full-stack (shared types between FE/BE)
+- Excellent async I/O for high-concurrency workloads
+- Massive ecosystem (npm packages)
+- Team expertise
+
+**Trade-offs**:
+- ❌ Not ideal for CPU-intensive tasks (image processing, etc.)
+- ❌ Less strict type system than Go/Rust
+- ✅ Faster development velocity
+- ✅ Easy to find developers
+
+### Frontend: React 18 + Vite
+**Why**:
+- Industry standard (easy hiring)
+- Component reusability
+- Rich ecosystem (UI libraries, testing tools)
+- Vite provides fast dev experience
+
+**Alternatives Considered**:
+- Next.js: Deferred for SEO requirements in v2.0
+- Vue.js: Team prefers React
+- Svelte: Smaller ecosystem
+
+### Database: PostgreSQL 16
+**Why**:
+- ACID transactions (critical for e-commerce)
+- JSON support (flexible product attributes)
+- Full-text search (product search)
+- Mature, reliable, open-source
+
+**Trade-offs**:
+- More complex than NoSQL
+- Requires careful schema design
+- ✅ Data integrity guarantees
+- ✅ Complex queries with JOINs
+
+### ORM: Prisma 5
+**Why**:
+- Type-safe database queries (TypeScript)
+- Excellent migration system
+- Auto-generated types
+- Great developer experience
+
+**Trade-offs**:
+- Slight performance overhead vs raw SQL
+- Learning curve for complex queries
+- ✅ Prevents SQL injection
+- ✅ Faster development
+
+---
+
+## Non-Functional Requirements
+
+### Performance
+- **API Response Time**: < 200ms (p95), < 500ms (p99)
+- **Frontend Load Time**: < 3 seconds (First Contentful Paint)
+- **Database Query Time**: < 50ms (p95)
+- **Target Throughput**: 1,000 req/sec (future scale)
+
+**Optimization Strategies**:
+- Database indexing on foreign keys and search fields
+- Redis caching for product catalog (5-minute TTL)
+- CDN for static assets (images, JS, CSS)
+- Connection pooling (PostgreSQL)
+- Query result pagination (limit 50 items)
+
+### Security
+- **Authentication**: JWT with 24-hour expiry
+- **Password Storage**: bcrypt (cost factor: 12)
+- **HTTPS**: TLS 1.3 enforced in production
+- **SQL Injection**: Prevented by Prisma (parameterized queries)
+- **XSS Protection**: React auto-escaping + Content Security Policy
+- **CSRF**: SameSite cookies + CSRF tokens on state-changing operations
+- **Rate Limiting**: 100 req/minute per IP (auth endpoints: 5 req/minute)
+- **Secrets**: Environment variables + AWS Secrets Manager (production)
+
+### Scalability
+**Current Design** (Single Server):
+- Handles ~1,000 concurrent users
+- Vertical scaling (add CPU/RAM)
+
+**Future Scale Plan** (10,000+ users):
+- Horizontal scaling: Load balancer + multiple backend instances
+- Database read replicas
+- Redis cluster
+- CDN for frontend assets
+- Consider microservices if monolith becomes bottleneck
+
+### Reliability
+- **Target Uptime**: 99.9% (8.7 hours downtime/year)
+- **Monitoring**: Prometheus + Grafana
+- **Error Tracking**: Sentry
+- **Logging**: Pino (structured JSON logs)
+- **Backups**: PostgreSQL daily backups (retain 30 days)
+- **Health Checks**: `/health` endpoint (checks DB, Redis connectivity)
+
+---
+
+## Deployment Architecture
+
+### Development Environment
+```
+Docker Compose:
+- backend (localhost:3000)
+- frontend (localhost:3001)
+- postgres (localhost:5432)
+- redis (localhost:6379)
+```
+
+### Staging Environment
+- **Platform**: Render.com
+- **Backend**: Docker container (auto-deploy from `staging` branch)
+- **Frontend**: Static site
+- **Database**: Managed PostgreSQL
+- **Redis**: Managed Redis
+
+### Production Environment
+- **Platform**: Google Cloud Run
+- **Backend**: Serverless containers (auto-scaling 1-10 instances)
+- **Frontend**: Vercel or Cloud CDN
+- **Database**: Cloud SQL (PostgreSQL)
+- **Redis**: Memorystore
+- **Monitoring**: Cloud Monitoring + Sentry
+
+---
+
+## API Design Principles
+
+1. **RESTful Conventions**: Use standard HTTP methods (GET, POST, PUT, DELETE)
+2. **Versioning**: `/api/v1/` prefix (allows breaking changes in v2)
+3. **Consistent Response Format**:
+   ```json
+   {
+     "success": true,
+     "data": { ... },
+     "error": null
+   }
+   ```
+4. **Error Responses**:
+   ```json
+   {
+     "success": false,
+     "data": null,
+     "error": {
+       "code": "INVALID_INPUT",
+       "message": "Email address is invalid",
+       "details": { "field": "email" }
+     }
+   }
+   ```
+5. **Pagination**: Use `?page=1&limit=50` query params
+6. **Authentication**: `Authorization: Bearer <jwt>` header
+
+---
+
+## Risk Assessment
+
+### Technical Risks
+
+| Risk | Likelihood | Impact | Mitigation |
+|------|-----------|--------|------------|
+| Database becomes bottleneck | Medium | High | Add read replicas; optimize queries; consider caching |
+| Stripe API downtime | Low | Critical | Implement retry logic; queue failed payments; fallback payment method |
+| Memory leaks in Node.js | Medium | Medium | Implement monitoring; regular restarts; profiling |
+| XSS vulnerabilities | Low | High | CSP headers; regular security audits; input sanitization |
+
+### Operational Risks
+
+| Risk | Likelihood | Impact | Mitigation |
+|------|-----------|--------|------------|
+| Deployment failures | Medium | Medium | Blue-green deployment; automated rollback; canary releases |
+| Data loss | Low | Critical | Daily backups; point-in-time recovery; disaster recovery plan |
+| Performance degradation | Medium | High | Load testing; performance monitoring; auto-scaling |
+
+---
+
+## Architecture Decision Records (ADRs)
+
+### ADR-001: Monolithic vs. Microservices
+**Decision**: Start with monolith
+**Reasoning**: Faster initial development; simpler deployment; sufficient for MVP scale
+**Consequences**: May need to refactor if scaling beyond 10K users
+**Status**: Accepted
+
+### ADR-002: PostgreSQL vs. MongoDB
+**Decision**: PostgreSQL
+**Reasoning**: Need ACID transactions for orders; complex relationships; team expertise
+**Consequences**: More rigid schema; requires migrations
+**Status**: Accepted
+
+### ADR-003: JWT vs. Session-based Auth
+**Decision**: JWT
+**Reasoning**: Stateless; works with multiple backend instances; mobile app friendly
+**Consequences**: Cannot invalidate tokens early; larger payload
+**Status**: Accepted
+
+---
+
+## Future Enhancements (v2.0+)
+
+1. **Search**: ElasticSearch for advanced product search (faceted search, typo tolerance)
+2. **Recommendations**: ML-based product recommendations
+3. **Real-time Inventory**: WebSocket notifications for low stock
+4. **Multi-tenant**: Support for multiple merchants
+5. **Mobile Apps**: React Native apps (iOS/Android)
+6. **Internationalization**: Multi-language support
+7. **Advanced Analytics**: Data warehouse (BigQuery) + BI dashboards
+
+---
+
+## Appendix
+
+### Glossary
+- **JWT**: JSON Web Token - stateless authentication token
+- **ACID**: Atomicity, Consistency, Isolation, Durability - database transaction properties
+- **CDN**: Content Delivery Network - distributed cache for static assets
+- **ORM**: Object-Relational Mapping - database abstraction layer
+
+### References
+- [React Documentation](https://react.dev)
+- [Express.js Guide](https://expressjs.com)
+- [Prisma Documentation](https://www.prisma.io/docs)
+- [PostgreSQL Manual](https://www.postgresql.org/docs/)
+- [Stripe API](https://stripe.com/docs/api)

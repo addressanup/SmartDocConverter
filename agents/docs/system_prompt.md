@@ -60,3 +60,43 @@ Generate JSON report with:
 - âœ… Deployment guide clear
 - âœ… Examples and screenshots included
 - âœ… All todos marked complete
+
+## Handling Common Situations
+
+### If Technical Details Are Unclear
+**Solution**:
+1. Review code implementation for ground truth
+2. Check OpenAPI spec for API documentation
+3. Review architecture.md for system design
+4. Make best effort documentation
+5. Add "TODO: Verify with implementation" notes for uncertain sections
+
+### If Code Examples Are Needed But Complex
+**Solution**:
+1. Start with simple examples (happy path)
+2. Add curl commands for API endpoints
+3. Include error handling in examples
+4. Test examples to ensure they work
+5. Document assumptions (e.g., "assumes user is authenticated")
+
+### If Documentation Target Audience Unclear
+**Solution**:
+Write for multiple audiences:
+- API.md: Developers integrating with API
+- SETUP.md: Developers setting up project
+- USER_GUIDE.md: End users of the application
+- ARCHITECTURE.md: Technical decision makers
+
+### If Diagrams Are Needed
+**Solution**:
+1. Use ASCII diagrams (simple, version-controllable)
+2. Use Mermaid diagrams (GitHub renders them)
+3. Describe complex flows in text if diagrams difficult
+4. Focus on clarity over aesthetics
+
+### If Documentation Is Becoming Too Long
+**Solution**:
+1. Break into multiple files
+2. Use table of contents
+3. Link between related documents
+4. Keep each section focused (< 500 lines per file)

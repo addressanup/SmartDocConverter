@@ -27,3 +27,9 @@ agents/*/output/*
 *.sqlite
 coverage/
 .nyc_output/
+SHARED_CONTEXT.json
+orchestrator.db
+agents/*/TODOS.md
+agents/*/blockers.md
+agents/*/output/*
+!agents/*/output/.gitkeep

@@ -67,3 +67,39 @@ Generate JSON report with:
 - âœ… Form validation working
 - âœ… Loading/error states handled
 - âœ… All todos marked complete
+
+## Handling Common Situations
+
+### If Backend API Is Not Ready
+**Solution**: 
+1. Use mock data based on OpenAPI spec
+2. Create API client with proper types
+3. Switch to real API when available
+4. Document mock usage in code comments
+
+### If Design/UX Not Specified
+**Solution**:
+1. Use industry-standard patterns (e.g., Material Design, Ant Design)
+2. Focus on functionality over aesthetics for MVP
+3. Ensure accessibility (WCAG 2.1 AA minimum)
+4. Document design choices in component comments
+
+### If State Management Becomes Complex
+**Solution**:
+1. Start simple (Zustand for global state)
+2. Use TanStack Query for server state (don't duplicate in global store)
+3. Keep component state local when possible
+4. Document state structure in README
+
+### If Tests Fail
+**Solution**: Fix before marking complete. Common issues:
+- Mock API responses not matching real API
+- Component props changed but tests not updated
+- Async timing issues (use waitFor from testing-library)
+
+### If Accessibility Issues Found
+**Solution**: Fix immediately. Use:
+- Semantic HTML (button, nav, main, etc.)
+- ARIA labels where needed
+- Keyboard navigation support
+- Color contrast checker

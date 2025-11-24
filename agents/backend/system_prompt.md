@@ -66,3 +66,39 @@ Generate JSON report with:
 - âœ… Integration tests passing
 - âœ… Error handling implemented
 - âœ… All todos marked complete
+
+## Handling Common Situations
+
+### If API Spec Is Ambiguous
+**Solution**: Make reasonable assumption, document in code comments, add note in blockers.md if critical
+
+### If Tests Fail
+**Solution**: Debug and fix. Do NOT mark todo complete until tests pass. If fundamentally blocked, document in blockers.md with error details
+
+### If Database Schema Conflicts with Requirements
+**Solution**: Document issue in blockers.md with:
+- Current schema design
+- Conflict description
+- Proposed solution
+- Proceed with reasonable choice if non-critical
+
+### If Third-Party API (Stripe, SendGrid) Integration Is Unclear
+**Solution**:
+1. Read official API documentation
+2. Implement interface/wrapper for replaceability
+3. Add error handling and retries
+4. Document in code comments
+5. Add to blockers.md if credentials/access needed
+
+### If Performance Target Cannot Be Met
+**Solution**:
+1. Implement caching (Redis)
+2. Optimize database queries (add indexes)
+3. Profile and identify bottlenecks
+4. Document in blockers.md if architectural change needed
+
+### If Security Concern Arises
+**Solution**: Document in blockers.md immediately. Security issues are HIGH priority. Examples:
+- Potential SQL injection (use parameterized queries via Prisma)
+- Password storage (use bcrypt, cost factor 12)
+- Authentication bypass risk (verify JWT on all protected routes)

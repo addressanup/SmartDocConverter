@@ -10,13 +10,38 @@ from pathlib import Path
 from datetime import datetime
 from typing import Dict, List, Optional
 
+# Database support (optional)
+try:
+    from database import Database
+    DATABASE_AVAILABLE = True
+except ImportError:
+    DATABASE_AVAILABLE = False
+
+
 
 class ProjectOrchestrator:
     """Orchestrates multi-agent development system"""
     
-    def __init__(self, project_root: str = "."):
+    def __init__(self, project_root: str = ".", use_database: bool = True):
         self.project_root = Path(project_root)
         self.context_file = self.project_root / "SHARED_CONTEXT.json"
+        self.use_database = use_database and DATABASE_AVAILABLE
+        
+        if self.use_database:
+            self.db = Database(str(self.project_root / "orchestrator.db"))
+            # Migrate from JSON if exists and DB is empty
+            if self.context_file.exists():
+                try:
+                    project = self.db.get_active_project()
+                    if not project:
+                        print("🔄 Migrating from SHARED_CONTEXT.json to database...")
+                        with open(self.context_file) as f:
+                            data = json.load(f)
+                        self.db.import_from_json(data)
+                        print("✅ Migration complete")
+                except Exception as e:
+                    print(f"⚠️  Migration warning: {e}")
+        
         self.agents = [
             "architect",
             "planner", 
@@ -37,35 +62,68 @@ class ProjectOrchestrator:
     
     def load_context(self) -> Dict:
         """Load current project context"""
-        if self.context_file.exists():
-            return json.loads(self.context_file.read_text())
-        return self.initialize_context()
+        if self.use_database:
+            project = self.db.get_active_project()
+            if project:
+                return self.db.export_to_json(project['id'])
+            return self.initialize_context()
+        else:
+            if self.context_file.exists():
+                return json.loads(self.context_file.read_text())
+            return self.initialize_context()
     
     def initialize_context(self) -> Dict:
         """Initialize new project context"""
-        context = {
-            "project": "Multi-Agent Development System",
-            "version": "1.0.0",
-            "current_phase": 1,
-            "status": "INITIALIZED",
-            "started_at": datetime.now().isoformat(),
-            "agents": {agent: {
-                "phase": "WAITING",
-                "status": "READY",
-                "progress": "0%",
-                "todos_completed": 0,
-                "todos_total": 0,
-                "last_update": None
-            } for agent in self.agents},
-            "phase_timeline": {},
-            "overall_progress": "0%"
-        }
-        self.save_context(context)
-        return context
+        if self.use_database:
+            project_id = self.db.create_project("Multi-Agent Development System", "1.0.0")
+            return self.db.export_to_json(project_id)
+        else:
+            context = {
+                "project": "Multi-Agent Development System",
+                "version": "1.0.0",
+                "current_phase": 1,
+                "status": "INITIALIZED",
+                "started_at": datetime.now().isoformat(),
+                "agents": {agent: {
+                    "phase": "WAITING",
+                    "status": "READY",
+                    "progress": "0%",
+                    "todos_completed": 0,
+                    "todos_total": 0,
+                    "last_update": None
+                } for agent in self.agents},
+                "phase_timeline": {},
+                "overall_progress": "0%"
+            }
+            self.save_context(context)
+            return context
     
     def save_context(self, context: Dict):
-        """Save project context to file"""
-        self.context_file.write_text(json.dumps(context, indent=2))
+        """Save project context"""
+        if self.use_database:
+            project = self.db.get_active_project()
+            if project:
+                # Update project
+                project_updates = {
+                    "current_phase": context.get("current_phase"),
+                    "current_feature": context.get("current_feature"),
+                    "status": context.get("status"),
+                    "overall_progress": context.get("overall_progress")
+                }
+                self.db.update_project(project['id'], project_updates)
+                
+                # Update agents
+                agents_data = context.get("agents", {})
+                for agent_name, agent_info in agents_data.items():
+                    self.db.update_agent(project['id'], agent_name, {
+                        "phase": agent_info.get("phase", "WAITING"),
+                        "status": agent_info.get("status", "READY"),
+                        "progress": agent_info.get("progress", "0%"),
+                        "todos_completed": agent_info.get("todos_completed", 0),
+                        "todos_total": agent_info.get("todos_total", 0)
+                    })
+        else:
+            self.context_file.write_text(json.dumps(context, indent=2))
     
     def get_agent_status(self, agent: str) -> Dict:
         """Get status of specific agent"""
@@ -87,19 +145,40 @@ class ProjectOrchestrator:
         """Transition to new project phase"""
         context = self.load_context()
         old_phase = context["current_phase"]
-        
+
+        # Validate current phase before advancing (except when initializing)
+        if old_phase > 0:
+            print(f"\n🔍 Validating Phase {old_phase} completion...")
+            try:
+                from phase_validators import validate_phase
+                success, errors = validate_phase(old_phase, str(self.project_root))
+
+                if not success:
+                    print(f"\n❌ Phase {old_phase} validation FAILED")
+                    print(f"\nFound {len(errors)} issues that must be fixed before advancing:\n")
+                    for i, error in enumerate(errors, 1):
+                        print(f"  {i}. {error}")
+                    print(f"\n💡 Fix these issues and try again.")
+                    return
+                else:
+                    print(f"✅ Phase {old_phase} validation PASSED\n")
+            except ImportError:
+                print("⚠️  Warning: phase_validators.py not found, skipping validation")
+            except Exception as e:
+                print(f"⚠️  Warning: Validation error: {str(e)}")
+
         context["current_phase"] = new_phase
         context["phase_timeline"][f"phase_{new_phase}_started"] = datetime.now().isoformat()
-        
+
         # Reset agent statuses for new phase
         phase_agents = self.phases[new_phase]["agents"]
         for agent in phase_agents:
             if agent != "orchestrator":
                 context["agents"][agent]["status"] = "IN_PROGRESS"
                 context["agents"][agent]["progress"] = "0%"
-        
+
         self.save_context(context)
-        print(f"âœ… Transitioned from Phase {old_phase} to Phase {new_phase}")
+        print(f"✅ Transitioned from Phase {old_phase} to Phase {new_phase}")
     
     def print_phase_instructions(self, phase: int):
         """Print instructions for a phase"""

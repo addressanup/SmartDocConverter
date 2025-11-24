@@ -1,0 +1,272 @@
+// Prisma Schema for E-Commerce Platform
+// Database: PostgreSQL 16
+// Generated: 2024-01-15
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ==================
+// User Management
+// ==================
+
+/// User accounts with authentication
+model User {
+  id        String   @id @default(uuid())
+  email     String   @unique
+  password  String   // bcrypt hashed
+  name      String
+  role      UserRole @default(USER)
+
+  // Relationships
+  orders    Order[]
+
+  // Timestamps
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([email])
+  @@map("users")
+}
+
+enum UserRole {
+  USER
+  ADMIN
+}
+
+// ==================
+// Product Catalog
+// ==================
+
+/// Product catalog with inventory tracking
+model Product {
+  id          String   @id @default(uuid())
+  name        String
+  description String?
+  price       Decimal  @db.Decimal(10, 2) // Max: 99,999,999.99
+  category    String
+  imageUrl    String?
+  stock       Int      @default(0)
+
+  // Soft delete
+  deletedAt   DateTime?
+
+  // Relationships
+  orderItems  OrderItem[]
+
+  // Timestamps
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  // Indexes for search and filtering
+  @@index([category])
+  @@index([name])
+  @@index([deletedAt]) // For filtering out deleted products
+  @@map("products")
+}
+
+// ==================
+// Order Management
+// ==================
+
+/// Order header - contains order metadata
+model Order {
+  id        String      @id @default(uuid())
+  userId    String
+
+  // Order details
+  status    OrderStatus @default(PENDING)
+  subtotal  Decimal     @db.Decimal(10, 2)
+  tax       Decimal     @db.Decimal(10, 2)
+  total     Decimal     @db.Decimal(10, 2)
+
+  // Shipping address (denormalized for immutability)
+  shippingLine1   String
+  shippingLine2   String?
+  shippingCity    String
+  shippingState   String
+  shippingZipCode String
+  shippingCountry String
+
+  // Payment
+  paymentMethodId String?  // Stripe payment method ID
+  paymentIntentId String?  // Stripe payment intent ID
+
+  // Relationships
+  user      User        @relation(fields: [userId], references: [id])
+  items     OrderItem[]
+
+  // Timestamps
+  createdAt DateTime    @default(now())
+  updatedAt DateTime    @updatedAt
+
+  // Indexes
+  @@index([userId])
+  @@index([status])
+  @@index([createdAt])
+  @@map("orders")
+}
+
+enum OrderStatus {
+  PENDING      // Payment not yet processed
+  PROCESSING   // Payment successful, preparing shipment
+  SHIPPED      // Order shipped
+  DELIVERED    // Order delivered
+  CANCELLED    // Order cancelled
+}
+
+/// Order line items - products in an order
+model OrderItem {
+  id        String  @id @default(uuid())
+  orderId   String
+  productId String
+
+  // Snapshot of product at time of order (immutable)
+  productName String
+  quantity    Int
+  price       Decimal @db.Decimal(10, 2) // Price at time of order
+  subtotal    Decimal @db.Decimal(10, 2) // quantity * price
+
+  // Relationships
+  order   Order   @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  product Product @relation(fields: [productId], references: [id])
+
+  // Timestamps
+  createdAt DateTime @default(now())
+
+  // Indexes
+  @@index([orderId])
+  @@index([productId])
+  @@map("order_items")
+}
+
+// ==================
+// Session Management (Alternative to Redis)
+// ==================
+
+/// User sessions for authentication
+/// Note: Can be replaced with Redis for better performance
+model Session {
+  id        String   @id @default(uuid())
+  userId    String
+  token     String   @unique  // JWT or session token
+  expiresAt DateTime
+
+  // User agent tracking
+  userAgent String?
+  ipAddress String?
+
+  // Timestamps
+  createdAt DateTime @default(now())
+
+  @@index([userId])
+  @@index([expiresAt]) // For cleanup of expired sessions
+  @@index([token])
+  @@map("sessions")
+}
+
+// ==================
+// Background Jobs (Alternative to BullMQ)
+// ==================
+
+/// Background job queue
+/// Note: Can be replaced with BullMQ/Redis for better performance
+model Job {
+  id        String    @id @default(uuid())
+  type      JobType
+  status    JobStatus @default(PENDING)
+  payload   Json      // Job-specific data
+
+  // Execution tracking
+  attempts  Int       @default(0)
+  maxRetries Int      @default(3)
+  error     String?   // Error message if failed
+
+  // Timestamps
+  createdAt  DateTime  @default(now())
+  startedAt  DateTime?
+  completedAt DateTime?
+
+  @@index([status])
+  @@index([type])
+  @@index([createdAt])
+  @@map("jobs")
+}
+
+enum JobType {
+  SEND_EMAIL
+  PROCESS_ORDER
+  UPDATE_INVENTORY
+  GENERATE_REPORT
+}
+
+enum JobStatus {
+  PENDING
+  RUNNING
+  COMPLETED
+  FAILED
+}
+
+// ==================
+// Audit Log
+// ==================
+
+/// Audit trail for sensitive operations
+model AuditLog {
+  id        String   @id @default(uuid())
+  userId    String?  // null for system operations
+  action    String   // e.g., "USER_CREATED", "ORDER_PLACED"
+  resource  String   // Resource type (e.g., "User", "Order")
+  resourceId String? // ID of affected resource
+
+  // Change tracking
+  oldValue  Json?
+  newValue  Json?
+
+  // Request metadata
+  ipAddress String?
+  userAgent String?
+
+  // Timestamp
+  createdAt DateTime @default(now())
+
+  @@index([userId])
+  @@index([action])
+  @@index([resource, resourceId])
+  @@index([createdAt])
+  @@map("audit_logs")
+}
+
+// ==================
+// Notes & Comments
+// ==================
+
+// Indexes Strategy:
+// - Primary keys (id) are automatically indexed
+// - Foreign keys are indexed for JOIN performance
+// - Fields used in WHERE clauses are indexed
+// - Created_at indexed for pagination/sorting
+// - Unique constraints (email, token) create implicit indexes
+
+// Migration Strategy:
+// 1. Development: Use `prisma migrate dev`
+// 2. Production: Use `prisma migrate deploy` in CI/CD
+// 3. Rollback: Keep migrations reversible when possible
+
+// Performance Considerations:
+// - Use connection pooling (set in DATABASE_URL)
+// - Consider read replicas for high-traffic scenarios
+// - Monitor slow queries (enable PostgreSQL logging)
+// - Use EXPLAIN ANALYZE for query optimization
+
+// Security Considerations:
+// - Never store plaintext passwords (use bcrypt)
+// - Validate all inputs before database operations
+// - Use prepared statements (Prisma does this automatically)
+// - Limit exposed fields in API responses (use select/omit)
+// - Implement rate limiting for API endpoints

@@ -5,20 +5,54 @@ on: [push, pull_request]
 jobs:
   test:
     runs-on: ubuntu-latest
+
     steps:
-      - uses: actions/checkout@v3
-      - uses: actions/setup-node@v3
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v3
         with:
-          node-version: '18'
-      
+          node-version: '20'
+          cache: 'npm'
+
+      # Backend Tests
       - name: Install backend dependencies
         run: cd backend && npm install
-      
-      - name: Test backend
-        run: cd backend && npm run test
-      
+
+      - name: Run backend tests with coverage
+        run: cd backend && npm run test -- --coverage --coverageThreshold='{"global":{"lines":80,"branches":75,"functions":75,"statements":80}}'
+
+      - name: Upload backend coverage to Codecov
+        uses: codecov/codecov-action@v3
+        with:
+          files: ./backend/coverage/coverage-final.json
+          flags: backend
+          name: backend-coverage
+
+      # Frontend Tests
       - name: Install frontend dependencies
         run: cd frontend && npm install
-      
-      - name: Test frontend
-        run: cd frontend && npm run test
+
+      - name: Run frontend tests with coverage
+        run: cd frontend && npm run test -- --coverage --coverage.lines=75 --coverage.functions=70 --coverage.branches=70 --coverage.statements=75
+
+      - name: Upload frontend coverage to Codecov
+        uses: codecov/codecov-action@v3
+        with:
+          files: ./frontend/coverage/coverage-final.json
+          flags: frontend
+          name: frontend-coverage
+
+      # Quality Checks
+      - name: Lint backend
+        run: cd backend && npm run lint || echo "Linting not configured yet"
+
+      - name: Lint frontend
+        run: cd frontend && npm run lint || echo "Linting not configured yet"
+
+      - name: TypeScript check backend
+        run: cd backend && npx tsc --noEmit || echo "TypeScript not configured yet"
+
+      - name: TypeScript check frontend
+        run: cd frontend && npx tsc --noEmit || echo "TypeScript not configured yet"

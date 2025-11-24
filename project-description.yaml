@@ -4,15 +4,43 @@ project_metadata:
   description: "Full-stack e-commerce app with auth, products, orders"
 
 tech_stack:
-  backend_runtime: "Node.js 18"
-  backend_framework: "Express.js"
-  backend_language: "TypeScript"
+  backend_runtime: "Node.js 20 LTS"
+  backend_framework: "Express.js 4.x"
+  backend_language: "TypeScript 5.x"
+  backend_testing: "Jest 29.x"
+
   frontend_framework: "React 18"
-  frontend_language: "TypeScript"
-  frontend_build_tool: "Vite"
-  frontend_css_framework: "Tailwind CSS 3"
-  database_system: "PostgreSQL 15"
-  orm: "Prisma 5"
+  frontend_language: "TypeScript 5.x"
+  frontend_build_tool: "Vite 5.x"
+  frontend_css_framework: "Tailwind CSS 3.4"
+  frontend_state_management: "Zustand 4.x"
+  frontend_data_fetching: "TanStack Query (React Query) 5.x"
+  frontend_testing: "Vitest + React Testing Library"
+
+  database_system: "PostgreSQL 16"
+  orm: "Prisma 5.x"
+
+  caching: "Redis 7.x"
+  queue_system: "BullMQ (Redis-based)"
+
+  file_storage: "AWS S3 (or compatible: MinIO for local)"
+  email_service: "SendGrid"
+  payment_gateway: "Stripe"
+
+  observability:
+    logging: "Pino (structured logging)"
+    metrics: "Prometheus + Grafana"
+    error_tracking: "Sentry"
+    apm: "OpenTelemetry (optional)"
+
+  infrastructure:
+    containerization: "Docker + Docker Compose"
+    ci_cd: "GitHub Actions"
+    deployment_target: "Google Cloud Run (production), Render.com (staging)"
+    iac: "Terraform (optional for advanced setups)"
+
+  e2e_testing: "Playwright"
+  api_documentation: "OpenAPI 3.0 + Redoc"
 
 features:
   - id: "auth"
