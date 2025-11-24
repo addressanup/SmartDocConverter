@@ -1,0 +1,55 @@
+project_metadata:
+  name: "Sample E-Commerce Platform"
+  version: "1.0.0"
+  description: "Full-stack e-commerce app with auth, products, orders"
+
+tech_stack:
+  backend_runtime: "Node.js 18"
+  backend_framework: "Express.js"
+  backend_language: "TypeScript"
+  frontend_framework: "React 18"
+  frontend_language: "TypeScript"
+  frontend_build_tool: "Vite"
+  frontend_css_framework: "Tailwind CSS 3"
+  database_system: "PostgreSQL 15"
+  orm: "Prisma 5"
+
+features:
+  - id: "auth"
+    name: "User Authentication"
+    priority: 1
+    dependencies: []
+    estimated_days: 3
+
+  - id: "products"
+    name: "Product Catalog"
+    priority: 2
+    dependencies: ["auth"]
+    estimated_days: 4
+
+  - id: "orders"
+    name: "Order Management"
+    priority: 3
+    dependencies: ["auth", "products"]
+    estimated_days: 4
+
+requirements:
+  performance:
+    api_response_time: "< 200ms (p95)"
+    frontend_page_load: "< 3 seconds"
+  security:
+    https_only: true
+    password_minimum: 8
+  testing:
+    backend_coverage: ">= 80%"
+    frontend_coverage: ">= 75%"
+
+constraints:
+  timeline_days: 30
+  team_size: 1
+
+deployment:
+  development:
+    target: "Local Docker Compose"
+    backend_port: 3000
+    frontend_port: 3001
