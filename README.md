@@ -40,13 +40,19 @@ A structured workflow framework that coordinates 7 AI agents through specialized
 
 **Setup:**
 ```bash
-# 1. Extract and initialize
-unzip multi-agent-dev-system.zip
+# 1. Clone the template repository
+git clone https://github.com/addressanup/multi-agent-dev-system.git
 cd multi-agent-dev-system
-git init && git add . && git commit -m "Initial setup"
 
-# 2. Review project requirements
+# 2. Create your project from template
+# Option A: Use as-is for the sample e-commerce project
 cat project-description.yaml
+
+# Option B: Start with the comprehensive example
+cp sample-project-description.yaml project-description.yaml
+
+# 3. Customize project-description.yaml for your needs
+# Edit: project name, features, tech stack, requirements
 
 # 3. Start orchestrator
 python3 orchestrator.py --phase 1
