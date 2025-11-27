@@ -1,0 +1,19 @@
+# robots.txt for SmartDocConverter
+
+# Allow all search engine crawlers
+User-agent: *
+Allow: /
+
+# Disallow API endpoints
+Disallow: /api/
+
+# Disallow private user pages
+Disallow: /dashboard
+Disallow: /profile
+Disallow: /settings
+
+# Sitemap location
+Sitemap: https://smartdocconverter.com/sitemap.xml
+
+# Host
+Host: smartdocconverter.com

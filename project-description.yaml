@@ -1,83 +1,1078 @@
+# ==============================================================================
+# SMARTDOCCONVERTER - PROJECT DESCRIPTION
+# ==============================================================================
+# A SaaS web tools platform providing high-demand document conversion services.
+# Monetization: Google AdSense + Premium subscriptions (Freemium model)
+#
+# Tools prioritized based on search volume and market demand research:
+# - PDF converters (to/from Word, Excel, PowerPoint, JPG)
+# - PDF utilities (merge, split, compress, rotate)
+# - OCR (image to text, handwriting recognition)
+# - Bank statement converters (PDF to Excel/CSV)
+# ==============================================================================
+
+# ------------------------------------------------------------------------------
+# PROJECT METADATA
+# ------------------------------------------------------------------------------
 project_metadata:
-  name: "Sample E-Commerce Platform"
+  name: "SmartDocConverter"
   version: "1.0.0"
-  description: "Full-stack e-commerce app with auth, products, orders"
+  description: |
+    A modern, fast, and user-friendly SaaS web platform providing essential
+    document conversion tools. Focus on high-search-volume tools like PDF
+    converters, OCR, document compression, and specialized converters like
+    bank statement to spreadsheet. Designed for individuals, students, small
+    businesses, and professionals who need quick, reliable document processing.
 
+    Key differentiators:
+    - Lightning-fast processing with client-side + server-side hybrid approach
+    - Privacy-focused: files auto-deleted after processing
+    - Clean, ad-supported free tier + affordable premium for power users
+    - Mobile-responsive design for on-the-go conversions
+    - No registration required for basic usage
+
+  project_type: "SaaS Web Application (Tool-based)"
+
+  target_audience: |
+    - Students and educators (converting assignments, notes)
+    - Small business owners and freelancers (invoices, contracts, statements)
+    - Office workers (document format conversions)
+    - Accountants and bookkeepers (bank statement processing)
+    - General consumers (occasional document needs)
+
+  business_model: |
+    Freemium with Advertising:
+    - Free tier: Limited conversions (5/day), ads displayed, basic features
+    - Premium tier: $4.99/month or $39.99/year
+      - Unlimited conversions
+      - No advertisements
+      - Priority processing
+      - Batch processing
+      - API access (future)
+
+# ------------------------------------------------------------------------------
+# TECHNOLOGY STACK
+# ------------------------------------------------------------------------------
 tech_stack:
+  # ----------------------------------------------------------------------------
+  # BACKEND STACK
+  # ----------------------------------------------------------------------------
   backend_runtime: "Node.js 20 LTS"
-  backend_framework: "Express.js 4.x"
+  backend_framework: "Next.js 14 (App Router with API Routes)"
   backend_language: "TypeScript 5.x"
-  backend_testing: "Jest 29.x"
+  backend_testing: "Jest 29.x + Supertest"
 
-  frontend_framework: "React 18"
+  # API Standards
+  api_style: "RESTful"
+  api_versioning: "URL-based (/api/v1/)"
+
+  # Document Processing Libraries
+  document_processing:
+    pdf_manipulation: "pdf-lib (create, modify, merge, split PDFs)"
+    pdf_parsing: "pdf-parse (extract text from PDFs)"
+    pdf_rendering: "PDF.js (client-side PDF viewing)"
+    pdf_generation: "Puppeteer (HTML to PDF, screenshots)"
+    ocr_engine: "Tesseract.js (client-side OCR) + Google Cloud Vision API (server-side for accuracy)"
+    image_processing: "Sharp (resize, compress, convert images)"
+    office_conversion: "LibreOffice headless (DOCX/XLSX/PPTX conversions)"
+    csv_parsing: "Papa Parse (CSV parsing and generation)"
+    xlsx_processing: "SheetJS (xlsx) for Excel file handling"
+
+  # Authentication (lightweight for tool-based SaaS)
+  auth_strategy: "JWT with optional OAuth (Google)"
+  auth_provider: "NextAuth.js v5"
+  session_management: "JWT in httpOnly cookies, optional for free tier"
+
+  # ----------------------------------------------------------------------------
+  # FRONTEND STACK
+  # ----------------------------------------------------------------------------
+  frontend_framework: "Next.js 14 (React 18 with Server Components)"
   frontend_language: "TypeScript 5.x"
-  frontend_build_tool: "Vite 5.x"
+  frontend_build_tool: "Next.js built-in (Turbopack for dev)"
+  frontend_router: "Next.js App Router"
   frontend_css_framework: "Tailwind CSS 3.4"
-  frontend_state_management: "Zustand 4.x"
-  frontend_data_fetching: "TanStack Query (React Query) 5.x"
-  frontend_testing: "Vitest + React Testing Library"
+  frontend_ui_library: "shadcn/ui (Radix UI + Tailwind)"
+  frontend_state_management: "Zustand 4.x (minimal global state)"
+  frontend_data_fetching: "TanStack Query 5.x"
+  frontend_form_handling: "React Hook Form + Zod validation"
+  frontend_testing: "Vitest + React Testing Library + Playwright"
+  frontend_file_handling: "react-dropzone (drag & drop uploads)"
+  frontend_progress: "React circular progressbar + custom loaders"
 
+  # Client-side Processing (for privacy & speed)
+  client_side_processing:
+    enabled: true
+    technologies:
+      - "Web Workers (background processing)"
+      - "WebAssembly (performance-critical operations)"
+      - "File API + Blob handling"
+      - "IndexedDB (temporary file storage)"
+
+  # ----------------------------------------------------------------------------
+  # DATABASE & DATA LAYER
+  # ----------------------------------------------------------------------------
   database_system: "PostgreSQL 16"
   orm: "Prisma 5.x"
 
-  caching: "Redis 7.x"
-  queue_system: "BullMQ (Redis-based)"
+  # Caching Strategy
+  caching: "Redis 7.x (Upstash for serverless)"
+  cache_strategy: "Rate limiting counters, session data, usage tracking"
 
-  file_storage: "AWS S3 (or compatible: MinIO for local)"
-  email_service: "SendGrid"
+  # Queue System (for heavy processing)
+  queue_system: "BullMQ (Redis-based) or Vercel Background Functions"
+  queue_use_cases: "Large file processing, batch conversions, OCR jobs"
+
+  # File Storage
+  file_storage: "AWS S3 (Cloudflare R2 as cost-effective alternative)"
+  file_storage_config:
+    temp_file_retention: "1 hour (auto-delete after download)"
+    max_file_size_free: "10MB"
+    max_file_size_premium: "50MB"
+
+  # ----------------------------------------------------------------------------
+  # THIRD-PARTY SERVICES
+  # ----------------------------------------------------------------------------
+  analytics:
+    primary: "Google Analytics 4"
+    secondary: "Plausible (privacy-friendly alternative)"
+    events_tracked:
+      - "tool_usage (which tools are popular)"
+      - "conversion_success_rate"
+      - "file_size_distribution"
+      - "user_journey_funnel"
+
+  advertising:
+    provider: "Google AdSense"
+    ad_placements:
+      - "Header banner (728x90)"
+      - "Sidebar (300x250)"
+      - "In-content native ads"
+      - "Footer banner"
+    ad_free_for_premium: true
+
+  email_service: "Resend (or SendGrid)"
+  email_use_cases: "Welcome emails, password reset, subscription receipts"
+
   payment_gateway: "Stripe"
+  payment_use_cases: "Premium subscriptions, one-time purchases (future)"
 
-  observability:
-    logging: "Pino (structured logging)"
-    metrics: "Prometheus + Grafana"
-    error_tracking: "Sentry"
-    apm: "OpenTelemetry (optional)"
+  error_tracking: "Sentry"
+  uptime_monitoring: "BetterStack (formerly BetterUptime)"
 
+  # ----------------------------------------------------------------------------
+  # INFRASTRUCTURE & DEVOPS
+  # ----------------------------------------------------------------------------
   infrastructure:
-    containerization: "Docker + Docker Compose"
-    ci_cd: "GitHub Actions"
-    deployment_target: "Google Cloud Run (production), Render.com (staging)"
-    iac: "Terraform (optional for advanced setups)"
+    hosting: "Vercel (frontend + API routes)"
+    heavy_processing: "AWS Lambda or Railway (for LibreOffice conversions)"
+    containerization: "Docker (for local dev + heavy processing workers)"
 
-  e2e_testing: "Playwright"
-  api_documentation: "OpenAPI 3.0 + Redoc"
+    ci_cd: "GitHub Actions"
+    ci_cd_stages:
+      - "Lint & Type Check"
+      - "Unit Tests"
+      - "Integration Tests"
+      - "Build"
+      - "Deploy to Preview (on PR)"
+      - "Deploy to Production (on merge to main)"
+
+    cdn: "Vercel Edge Network + Cloudflare (for static assets)"
+
+    secrets_management: "Vercel Environment Variables + .env.local"
+
+  # ----------------------------------------------------------------------------
+  # SEO & PERFORMANCE
+  # ----------------------------------------------------------------------------
+  seo:
+    meta_tags: "Dynamic meta tags per tool page"
+    structured_data: "JSON-LD for SoftwareApplication schema"
+    sitemap: "Auto-generated sitemap.xml"
+    robots: "Proper robots.txt with tool indexing"
+    canonical_urls: "Prevent duplicate content issues"
+    page_speed_target: "90+ Lighthouse score"
+
+  performance:
+    image_optimization: "Next.js Image component + WebP"
+    code_splitting: "Automatic with Next.js"
+    lazy_loading: "Tools loaded on demand"
+    service_worker: "PWA support for offline capability"
+
+# ------------------------------------------------------------------------------
+# FEATURES - DOCUMENT CONVERSION TOOLS
+# ------------------------------------------------------------------------------
+# Prioritized by search volume and market demand
+# ------------------------------------------------------------------------------
 
 features:
-  - id: "auth"
-    name: "User Authentication"
+  # ============================================================================
+  # PHASE 1: CORE PDF TOOLS (Highest Search Volume)
+  # ============================================================================
+
+  - id: "landing-page"
+    name: "Landing Page & Tool Directory"
+    description: |
+      Modern, SEO-optimized landing page showcasing all available tools.
+      Clear navigation, tool categories, search functionality, and
+      compelling value propositions for both free and premium users.
     priority: 1
     dependencies: []
     estimated_days: 3
+    acceptance_criteria:
+      - "Hero section with clear value proposition"
+      - "Tool grid with icons and descriptions"
+      - "Category filters (PDF, Image, Document, Data)"
+      - "Search bar for finding specific tools"
+      - "Testimonials/trust signals section"
+      - "Pricing comparison (Free vs Premium)"
+      - "SEO meta tags and structured data"
+      - "Mobile-responsive design"
 
-  - id: "products"
-    name: "Product Catalog"
+  - id: "pdf-to-word"
+    name: "PDF to Word Converter"
+    description: |
+      Convert PDF files to editable Microsoft Word documents (.docx).
+      Preserve formatting, images, tables, and text layout.
+      Support for scanned PDFs via OCR.
+    priority: 1
+    dependencies: ["landing-page"]
+    estimated_days: 4
+    seo_keywords: ["pdf to word", "pdf to docx", "convert pdf to word online free"]
+    acceptance_criteria:
+      - "Upload PDF via drag-drop or file picker"
+      - "Support files up to 10MB (free) / 50MB (premium)"
+      - "Preserve text formatting and layout"
+      - "Handle images and tables correctly"
+      - "OCR option for scanned documents"
+      - "Download as .docx file"
+      - "Progress indicator during conversion"
+      - "Error handling for corrupted/encrypted PDFs"
+
+  - id: "word-to-pdf"
+    name: "Word to PDF Converter"
+    description: |
+      Convert Microsoft Word documents (.doc, .docx) to PDF format.
+      Maintain all formatting, fonts, images, and page layout.
+    priority: 1
+    dependencies: ["landing-page"]
+    estimated_days: 3
+    seo_keywords: ["word to pdf", "docx to pdf", "convert word to pdf free"]
+    acceptance_criteria:
+      - "Support .doc and .docx files"
+      - "Preserve all formatting and images"
+      - "Maintain hyperlinks in output PDF"
+      - "Fast conversion (< 10 seconds for typical files)"
+      - "High-quality PDF output"
+      - "Option to compress output PDF"
+
+  - id: "pdf-to-excel"
+    name: "PDF to Excel Converter"
+    description: |
+      Extract tables and data from PDF files to Excel spreadsheets (.xlsx).
+      Smart table detection with optional OCR for scanned documents.
+    priority: 1
+    dependencies: ["landing-page"]
+    estimated_days: 5
+    seo_keywords: ["pdf to excel", "pdf to xlsx", "extract table from pdf"]
+    acceptance_criteria:
+      - "Detect and extract tables automatically"
+      - "Support multiple tables per page"
+      - "OCR support for scanned PDFs"
+      - "Preview extracted data before download"
+      - "Export to .xlsx format"
+      - "Handle multi-page PDFs"
+      - "Preserve numeric formatting"
+
+  - id: "compress-pdf"
+    name: "Compress PDF"
+    description: |
+      Reduce PDF file size while maintaining acceptable quality.
+      Multiple compression levels: low, medium, high compression.
+    priority: 1
+    dependencies: ["landing-page"]
+    estimated_days: 3
+    seo_keywords: ["compress pdf", "reduce pdf size", "pdf compressor online"]
+    acceptance_criteria:
+      - "Three compression levels (low/medium/high)"
+      - "Show before/after file size comparison"
+      - "Maintain readable text quality"
+      - "Process files up to 50MB"
+      - "Batch compression for premium users"
+      - "Estimated compression ratio preview"
+
+  - id: "merge-pdf"
+    name: "Merge PDF Files"
+    description: |
+      Combine multiple PDF files into a single document.
+      Drag-and-drop reordering of files before merging.
+    priority: 1
+    dependencies: ["landing-page"]
+    estimated_days: 3
+    seo_keywords: ["merge pdf", "combine pdf", "join pdf files"]
+    acceptance_criteria:
+      - "Upload multiple PDFs (up to 10 free, 50 premium)"
+      - "Drag-and-drop to reorder files"
+      - "Preview pages before merging"
+      - "Fast processing"
+      - "Maintain original quality"
+      - "Support files totaling up to 100MB"
+
+  - id: "split-pdf"
+    name: "Split PDF"
+    description: |
+      Split a PDF into multiple separate documents.
+      Options: split by page range, extract specific pages, or split every N pages.
+    priority: 1
+    dependencies: ["landing-page"]
+    estimated_days: 3
+    seo_keywords: ["split pdf", "separate pdf pages", "extract pages from pdf"]
+    acceptance_criteria:
+      - "Visual page selector interface"
+      - "Split by custom page ranges"
+      - "Extract specific pages"
+      - "Split every N pages option"
+      - "Download individual files or ZIP archive"
+      - "Preview pages before splitting"
+
+  # ============================================================================
+  # PHASE 2: IMAGE & PDF CONVERSIONS
+  # ============================================================================
+
+  - id: "jpg-to-pdf"
+    name: "JPG to PDF Converter"
+    description: |
+      Convert JPG/JPEG images to PDF documents.
+      Support for multiple images with layout options.
     priority: 2
-    dependencies: ["auth"]
-    estimated_days: 4
+    dependencies: ["landing-page"]
+    estimated_days: 2
+    seo_keywords: ["jpg to pdf", "image to pdf", "convert picture to pdf"]
+    acceptance_criteria:
+      - "Support JPG, JPEG, PNG, GIF, BMP, WebP"
+      - "Multiple images in one PDF"
+      - "Page orientation options (portrait/landscape)"
+      - "Page size options (A4, Letter, etc.)"
+      - "Margin settings"
+      - "Image quality settings"
+      - "Drag-and-drop reordering"
 
-  - id: "orders"
-    name: "Order Management"
-    priority: 3
-    dependencies: ["auth", "products"]
+  - id: "pdf-to-jpg"
+    name: "PDF to JPG Converter"
+    description: |
+      Convert PDF pages to high-quality JPG images.
+      Options for individual pages or all pages at once.
+    priority: 2
+    dependencies: ["landing-page"]
+    estimated_days: 2
+    seo_keywords: ["pdf to jpg", "pdf to image", "convert pdf to picture"]
+    acceptance_criteria:
+      - "Convert single or all pages"
+      - "Adjustable image quality (DPI)"
+      - "Output format options (JPG, PNG)"
+      - "Download as ZIP for multiple pages"
+      - "Preview before download"
+      - "Maintain aspect ratio"
+
+  - id: "pdf-to-png"
+    name: "PDF to PNG Converter"
+    description: |
+      Convert PDF pages to PNG images with transparency support.
+    priority: 2
+    dependencies: ["pdf-to-jpg"]
+    estimated_days: 1
+    seo_keywords: ["pdf to png", "pdf to image transparent"]
+    acceptance_criteria:
+      - "High-quality PNG output"
+      - "Transparency preservation"
+      - "Configurable resolution"
+      - "Batch conversion support"
+
+  - id: "png-to-pdf"
+    name: "PNG to PDF Converter"
+    description: |
+      Convert PNG images to PDF with transparency handling.
+    priority: 2
+    dependencies: ["jpg-to-pdf"]
+    estimated_days: 1
+    seo_keywords: ["png to pdf", "convert png to pdf"]
+    acceptance_criteria:
+      - "Handle transparent backgrounds"
+      - "Multiple images support"
+      - "Quality preservation"
+
+  # ============================================================================
+  # PHASE 3: OCR & TEXT EXTRACTION
+  # ============================================================================
+
+  - id: "image-to-text"
+    name: "Image to Text (OCR)"
+    description: |
+      Extract text from images using advanced OCR technology.
+      Support for multiple languages and handwriting recognition.
+    priority: 2
+    dependencies: ["landing-page"]
+    estimated_days: 5
+    seo_keywords: ["image to text", "ocr online", "extract text from image", "photo to text"]
+    acceptance_criteria:
+      - "Support JPG, PNG, GIF, BMP, WebP, TIFF"
+      - "Multiple language support (20+ languages)"
+      - "Handwriting recognition option"
+      - "Copy text to clipboard"
+      - "Download as TXT file"
+      - "Accuracy indicator"
+      - "Client-side processing option for privacy"
+
+  - id: "pdf-ocr"
+    name: "PDF OCR (Scanned PDF to Searchable)"
+    description: |
+      Make scanned PDFs searchable by applying OCR.
+      Create text layer while preserving original appearance.
+    priority: 2
+    dependencies: ["image-to-text"]
     estimated_days: 4
+    seo_keywords: ["pdf ocr", "scanned pdf to text", "searchable pdf"]
+    acceptance_criteria:
+      - "Detect if PDF needs OCR"
+      - "Multi-language OCR support"
+      - "Preserve original PDF appearance"
+      - "Create searchable/selectable text layer"
+      - "Option to extract text only"
+      - "Batch processing for premium"
+
+  # ============================================================================
+  # PHASE 4: SPECIALIZED CONVERTERS (High Value)
+  # ============================================================================
+
+  - id: "bank-statement-to-excel"
+    name: "Bank Statement to Excel/CSV"
+    description: |
+      Convert bank statement PDFs to structured Excel or CSV files.
+      Automatic transaction detection, categorization, and column mapping.
+      Support for major banks worldwide.
+    priority: 2
+    dependencies: ["pdf-to-excel"]
+    estimated_days: 7
+    seo_keywords: ["bank statement to excel", "bank statement to csv", "convert bank statement"]
+    acceptance_criteria:
+      - "Support major bank statement formats"
+      - "Automatic transaction detection"
+      - "Column mapping (date, description, amount, balance)"
+      - "Handle credits and debits correctly"
+      - "Export to Excel (.xlsx) or CSV"
+      - "Preview and edit before download"
+      - "Date format normalization"
+      - "Currency detection"
+      - "Privacy-first: no data stored"
+
+  - id: "pdf-to-powerpoint"
+    name: "PDF to PowerPoint Converter"
+    description: |
+      Convert PDF files to editable PowerPoint presentations (.pptx).
+      Each PDF page becomes a slide.
+    priority: 3
+    dependencies: ["landing-page"]
+    estimated_days: 4
+    seo_keywords: ["pdf to powerpoint", "pdf to pptx", "convert pdf to ppt"]
+    acceptance_criteria:
+      - "Convert each page to a slide"
+      - "Preserve images and layout"
+      - "Editable text in slides"
+      - "Support for multi-page PDFs"
+      - "Download as .pptx"
+
+  - id: "powerpoint-to-pdf"
+    name: "PowerPoint to PDF Converter"
+    description: |
+      Convert PowerPoint presentations to PDF format.
+    priority: 3
+    dependencies: ["landing-page"]
+    estimated_days: 2
+    seo_keywords: ["powerpoint to pdf", "pptx to pdf", "convert ppt to pdf"]
+    acceptance_criteria:
+      - "Support .ppt and .pptx files"
+      - "Preserve animations as static slides"
+      - "Maintain formatting and images"
+      - "Options for slides per page"
+
+  - id: "excel-to-pdf"
+    name: "Excel to PDF Converter"
+    description: |
+      Convert Excel spreadsheets to PDF documents.
+    priority: 3
+    dependencies: ["landing-page"]
+    estimated_days: 2
+    seo_keywords: ["excel to pdf", "xlsx to pdf", "convert spreadsheet to pdf"]
+    acceptance_criteria:
+      - "Support .xls and .xlsx files"
+      - "Handle multiple sheets"
+      - "Preserve formatting and formulas as values"
+      - "Page layout options"
+
+  - id: "html-to-pdf"
+    name: "HTML/URL to PDF"
+    description: |
+      Convert web pages or HTML content to PDF documents.
+      Full page capture with styling preserved.
+    priority: 3
+    dependencies: ["landing-page"]
+    estimated_days: 3
+    seo_keywords: ["html to pdf", "webpage to pdf", "url to pdf", "save webpage as pdf"]
+    acceptance_criteria:
+      - "Convert by URL input"
+      - "Paste HTML code option"
+      - "Preserve CSS styling"
+      - "Handle responsive layouts"
+      - "Page size options"
+      - "Header/footer customization"
+
+  # ============================================================================
+  # PHASE 5: PDF UTILITIES
+  # ============================================================================
+
+  - id: "rotate-pdf"
+    name: "Rotate PDF Pages"
+    description: |
+      Rotate PDF pages individually or all at once.
+      90°, 180°, 270° rotation options.
+    priority: 3
+    dependencies: ["landing-page"]
+    estimated_days: 2
+    seo_keywords: ["rotate pdf", "rotate pdf pages", "flip pdf"]
+    acceptance_criteria:
+      - "Rotate individual pages"
+      - "Rotate all pages at once"
+      - "90°, 180°, 270° clockwise options"
+      - "Visual page preview"
+      - "Preserve PDF quality"
+
+  - id: "unlock-pdf"
+    name: "Unlock PDF (Remove Password)"
+    description: |
+      Remove password protection from PDFs (with valid password).
+      Unlock editing restrictions.
+    priority: 3
+    dependencies: ["landing-page"]
+    estimated_days: 2
+    seo_keywords: ["unlock pdf", "remove pdf password", "unprotect pdf"]
+    acceptance_criteria:
+      - "Remove owner password (editing restrictions)"
+      - "Require user password if encrypted"
+      - "Clear disclaimer about legal use"
+      - "Download unprotected PDF"
+
+  - id: "protect-pdf"
+    name: "Protect PDF (Add Password)"
+    description: |
+      Add password protection to PDF files.
+      Set permissions for printing, copying, editing.
+    priority: 3
+    dependencies: ["landing-page"]
+    estimated_days: 2
+    seo_keywords: ["protect pdf", "password protect pdf", "encrypt pdf"]
+    acceptance_criteria:
+      - "Set open password"
+      - "Set owner password for permissions"
+      - "Granular permission controls"
+      - "Strong encryption (AES-256)"
+      - "Password strength indicator"
+
+  - id: "add-watermark"
+    name: "Add Watermark to PDF"
+    description: |
+      Add text or image watermarks to PDF pages.
+      Customize position, opacity, and rotation.
+    priority: 3
+    dependencies: ["landing-page"]
+    estimated_days: 2
+    seo_keywords: ["add watermark to pdf", "pdf watermark"]
+    acceptance_criteria:
+      - "Text watermark with custom font"
+      - "Image watermark upload"
+      - "Position options (center, corner, tiled)"
+      - "Opacity control"
+      - "Rotation angle"
+      - "Apply to all or specific pages"
+
+  - id: "add-page-numbers"
+    name: "Add Page Numbers to PDF"
+    description: |
+      Add page numbers to PDF documents.
+      Customize position, format, and starting number.
+    priority: 3
+    dependencies: ["landing-page"]
+    estimated_days: 2
+    seo_keywords: ["add page numbers to pdf", "pdf page numbers"]
+    acceptance_criteria:
+      - "Position options (top/bottom, left/center/right)"
+      - "Number format (1, 2, 3 or i, ii, iii)"
+      - "Custom starting number"
+      - "Prefix/suffix text"
+      - "Skip first N pages option"
+      - "Font and size options"
+
+  - id: "pdf-to-pdfa"
+    name: "PDF to PDF/A Converter"
+    description: |
+      Convert PDF to PDF/A format for long-term archiving.
+    priority: 4
+    dependencies: ["landing-page"]
+    estimated_days: 2
+    seo_keywords: ["pdf to pdf/a", "pdf/a converter", "archive pdf"]
+    acceptance_criteria:
+      - "Support PDF/A-1b, PDF/A-2b, PDF/A-3b"
+      - "Validation of output"
+      - "Embed required fonts"
+      - "Convert color profiles"
+
+  - id: "repair-pdf"
+    name: "Repair Corrupted PDF"
+    description: |
+      Attempt to repair and recover corrupted PDF files.
+    priority: 4
+    dependencies: ["landing-page"]
+    estimated_days: 3
+    seo_keywords: ["repair pdf", "fix corrupted pdf", "recover pdf"]
+    acceptance_criteria:
+      - "Detect corruption issues"
+      - "Attempt multiple repair strategies"
+      - "Recover readable content"
+      - "Report what was recovered"
+      - "Clear messaging if repair fails"
+
+  # ============================================================================
+  # PHASE 6: IMAGE TOOLS
+  # ============================================================================
+
+  - id: "compress-image"
+    name: "Compress Image"
+    description: |
+      Reduce image file size while maintaining quality.
+      Support for JPG, PNG, WebP formats.
+    priority: 3
+    dependencies: ["landing-page"]
+    estimated_days: 2
+    seo_keywords: ["compress image", "reduce image size", "image compressor"]
+    acceptance_criteria:
+      - "Support JPG, PNG, WebP, GIF"
+      - "Quality slider control"
+      - "Before/after comparison"
+      - "Batch compression"
+      - "Show file size reduction"
+
+  - id: "resize-image"
+    name: "Resize Image"
+    description: |
+      Resize images by dimensions or percentage.
+      Maintain aspect ratio option.
+    priority: 3
+    dependencies: ["landing-page"]
+    estimated_days: 2
+    seo_keywords: ["resize image", "image resizer", "change image size"]
+    acceptance_criteria:
+      - "Resize by pixels or percentage"
+      - "Lock/unlock aspect ratio"
+      - "Preset sizes (social media, web)"
+      - "Batch resizing"
+      - "Preview before download"
+
+  - id: "convert-image-format"
+    name: "Convert Image Format"
+    description: |
+      Convert between image formats (JPG, PNG, WebP, GIF, BMP, TIFF).
+    priority: 3
+    dependencies: ["landing-page"]
+    estimated_days: 2
+    seo_keywords: ["convert image", "jpg to png", "png to jpg", "webp converter"]
+    acceptance_criteria:
+      - "Support all major formats"
+      - "Quality settings for lossy formats"
+      - "Batch conversion"
+      - "Preserve EXIF data option"
+
+  # ============================================================================
+  # PHASE 7: PREMIUM & INFRASTRUCTURE FEATURES
+  # ============================================================================
+
+  - id: "user-auth"
+    name: "User Authentication System"
+    description: |
+      Optional user accounts for tracking usage, saving preferences,
+      and premium subscription management.
+    priority: 2
+    dependencies: ["landing-page"]
+    estimated_days: 4
+    acceptance_criteria:
+      - "Email/password registration"
+      - "Google OAuth login"
+      - "Email verification"
+      - "Password reset flow"
+      - "Profile settings page"
+      - "Usage history dashboard"
+      - "GDPR-compliant data handling"
+
+  - id: "premium-subscription"
+    name: "Premium Subscription System"
+    description: |
+      Stripe-powered subscription for premium features.
+      Monthly and annual billing options.
+    priority: 2
+    dependencies: ["user-auth"]
+    estimated_days: 5
+    acceptance_criteria:
+      - "Stripe Checkout integration"
+      - "Monthly ($4.99) and Annual ($39.99) plans"
+      - "Free trial option (7 days)"
+      - "Subscription management portal"
+      - "Cancel/downgrade handling"
+      - "Invoice generation"
+      - "Usage limits enforcement"
+      - "Payment failure handling"
+
+  - id: "rate-limiting"
+    name: "Rate Limiting & Usage Tracking"
+    description: |
+      Implement fair usage limits for free tier users.
+      Track conversions and enforce daily limits.
+    priority: 2
+    dependencies: ["landing-page"]
+    estimated_days: 3
+    acceptance_criteria:
+      - "5 conversions/day for free users"
+      - "Fingerprint-based tracking (no login required)"
+      - "Clear limit indicators in UI"
+      - "Upgrade prompts when limit reached"
+      - "IP-based rate limiting for abuse prevention"
+      - "Redis-based counter storage"
+
+  - id: "adsense-integration"
+    name: "Google AdSense Integration"
+    description: |
+      Integrate Google AdSense for ad monetization.
+      Strategic ad placements without compromising UX.
+    priority: 2
+    dependencies: ["landing-page"]
+    estimated_days: 2
+    acceptance_criteria:
+      - "AdSense account setup and verification"
+      - "Ad units: header, sidebar, in-content"
+      - "Responsive ad sizes"
+      - "Ad-free for premium users"
+      - "Lazy load ads for performance"
+      - "GDPR/consent management"
+
+  - id: "analytics-setup"
+    name: "Analytics & Tracking Setup"
+    description: |
+      Comprehensive analytics to understand user behavior
+      and optimize conversion funnels.
+    priority: 2
+    dependencies: ["landing-page"]
+    estimated_days: 2
+    acceptance_criteria:
+      - "Google Analytics 4 integration"
+      - "Tool usage event tracking"
+      - "Conversion funnel tracking"
+      - "User demographics insights"
+      - "Page performance metrics"
+      - "Custom events for business KPIs"
+      - "GDPR-compliant cookie consent"
+
+  - id: "seo-optimization"
+    name: "SEO & Content Optimization"
+    description: |
+      Comprehensive SEO implementation for organic traffic.
+      Target high-volume keywords for each tool.
+    priority: 2
+    dependencies: ["landing-page"]
+    estimated_days: 3
+    acceptance_criteria:
+      - "Unique meta titles/descriptions per tool"
+      - "Structured data (JSON-LD) for tools"
+      - "XML sitemap generation"
+      - "Optimized URL structure"
+      - "Fast page load times (Core Web Vitals)"
+      - "Mobile-first responsive design"
+      - "Internal linking strategy"
+      - "FAQ sections for featured snippets"
+
+  - id: "batch-processing"
+    name: "Batch Processing (Premium)"
+    description: |
+      Allow premium users to process multiple files at once.
+      Queue management and progress tracking.
+    priority: 3
+    dependencies: ["premium-subscription"]
+    estimated_days: 4
+    acceptance_criteria:
+      - "Upload multiple files (up to 20)"
+      - "Process in parallel"
+      - "Progress tracking per file"
+      - "Download all as ZIP"
+      - "Handle partial failures gracefully"
+      - "Premium-only feature"
+
+# ------------------------------------------------------------------------------
+# NON-FUNCTIONAL REQUIREMENTS
+# ------------------------------------------------------------------------------
 
 requirements:
+  # Performance Requirements
   performance:
-    api_response_time: "< 200ms (p95)"
-    frontend_page_load: "< 3 seconds"
+    page_load_time: "< 2 seconds (initial load)"
+    tool_page_load: "< 1 second (navigation)"
+    small_file_processing: "< 5 seconds (files < 1MB)"
+    large_file_processing: "< 30 seconds (files < 10MB)"
+    lighthouse_score: ">= 90 (Performance, SEO, Accessibility)"
+    core_web_vitals:
+      lcp: "< 2.5s"
+      fid: "< 100ms"
+      cls: "< 0.1"
+
+  # Security Requirements
   security:
     https_only: true
-    password_minimum: 8
+    file_handling:
+      - "Files deleted within 1 hour of processing"
+      - "No files stored for free users (immediate delete)"
+      - "Virus scanning on uploads"
+    input_validation: "Strict file type and size validation"
+    rate_limiting: "Protect against abuse and DDoS"
+    csp: "Content Security Policy headers"
+    privacy:
+      - "No tracking without consent"
+      - "GDPR and CCPA compliant"
+      - "Clear privacy policy"
+      - "Optional client-side processing"
+
+  # Accessibility Requirements
+  accessibility:
+    wcag_level: "WCAG 2.1 AA"
+    keyboard_navigation: "Full keyboard accessibility"
+    screen_reader: "Proper ARIA labels"
+    color_contrast: "Minimum 4.5:1 ratio"
+    focus_indicators: "Clear focus states"
+
+  # Browser Support
+  browser_support:
+    - "Chrome 100+ (last 2 years)"
+    - "Firefox 100+ (last 2 years)"
+    - "Safari 15+ (last 2 years)"
+    - "Edge 100+ (last 2 years)"
+    - "Mobile browsers (iOS Safari, Chrome Mobile)"
+
+  # Testing Requirements
   testing:
-    backend_coverage: ">= 80%"
-    frontend_coverage: ">= 75%"
+    unit_test_coverage: ">= 70%"
+    integration_tests: "All API endpoints"
+    e2e_tests: "Critical conversion flows"
+    visual_regression: "Key UI components"
+    performance_tests: "File processing benchmarks"
+
+# ------------------------------------------------------------------------------
+# PROJECT CONSTRAINTS
+# ------------------------------------------------------------------------------
 
 constraints:
-  timeline_days: 30
+  timeline_days: 45
+  timeline_breakdown:
+    phase_1_core_pdf_tools: 15
+    phase_2_image_ocr_tools: 10
+    phase_3_specialized_premium: 10
+    phase_4_monetization_polish: 7
+    phase_5_testing_launch: 3
+
   team_size: 1
+
+  monthly_budget:
+    vercel_pro: "$20"
+    database_supabase: "$25"
+    redis_upstash: "$10"
+    s3_storage: "$10"
+    sentry: "$0 (free tier)"
+    domain: "$12/year"
+    total: "~$65/month"
+
+  file_limits:
+    max_file_size_free: "10MB"
+    max_file_size_premium: "50MB"
+    max_files_per_batch: 20
+    daily_conversions_free: 5
+    daily_conversions_premium: "Unlimited"
+
+  out_of_scope_v1:
+    - "Mobile native apps"
+    - "Desktop applications"
+    - "API access (future v2 feature)"
+    - "Team/enterprise accounts"
+    - "White-label solutions"
+    - "Real-time collaboration"
+    - "Document editing (only conversion)"
+
+# ------------------------------------------------------------------------------
+# DEPLOYMENT CONFIGURATION
+# ------------------------------------------------------------------------------
 
 deployment:
   development:
-    target: "Local Docker Compose"
-    backend_port: 3000
-    frontend_port: 3001
+    command: "npm run dev"
+    port: 3000
+    database: "Local PostgreSQL or Docker"
+    hot_reload: true
+    debug_mode: true
+
+  staging:
+    platform: "Vercel Preview"
+    url: "https://smartdocconverter-staging.vercel.app"
+    database: "Supabase (staging project)"
+    auto_deploy: true
+    branch: "develop"
+
+  production:
+    platform: "Vercel"
+    url: "https://smartdocconverter.com"
+    database: "Supabase (production)"
+    cdn: "Vercel Edge + Cloudflare"
+    auto_deploy: false
+    branch: "main"
+    health_check: "/api/health"
+
+# ------------------------------------------------------------------------------
+# MONETIZATION STRATEGY
+# ------------------------------------------------------------------------------
+
+monetization:
+  revenue_streams:
+    - name: "Google AdSense"
+      description: "Display ads for free tier users"
+      expected_cpm: "$2-5 (utility/tools niche)"
+
+    - name: "Premium Subscriptions"
+      description: "Monthly/yearly subscriptions for power users"
+      pricing:
+        monthly: "$4.99"
+        annual: "$39.99 ($3.33/month)"
+      target_conversion: "2-5% of active users"
+
+  premium_benefits:
+    - "Unlimited conversions (no daily limit)"
+    - "No advertisements"
+    - "Larger file sizes (50MB vs 10MB)"
+    - "Batch processing (20 files at once)"
+    - "Priority processing queue"
+    - "Download history (30 days)"
+    - "Email support"
+
+  free_tier_limitations:
+    - "5 conversions per day"
+    - "10MB max file size"
+    - "Single file processing only"
+    - "Ads displayed"
+    - "Standard processing speed"
+
+# ------------------------------------------------------------------------------
+# SEO STRATEGY
+# ------------------------------------------------------------------------------
+
+seo_strategy:
+  target_keywords:
+    high_priority:
+      - "pdf to word converter"
+      - "compress pdf online"
+      - "merge pdf"
+      - "pdf to excel"
+      - "image to text"
+      - "jpg to pdf"
+      - "pdf to jpg"
+
+    medium_priority:
+      - "split pdf"
+      - "word to pdf"
+      - "ocr online"
+      - "bank statement to excel"
+      - "rotate pdf"
+      - "unlock pdf"
+
+    long_tail:
+      - "free pdf to word converter no sign up"
+      - "convert bank statement pdf to csv"
+      - "compress pdf to 1mb"
+      - "merge pdf files online free"
+
+  content_strategy:
+    - "Tool-specific landing pages optimized for primary keywords"
+    - "How-to guides and tutorials"
+    - "FAQ sections for featured snippets"
+    - "Comparison pages (vs competitors)"
+    - "Use case pages (e.g., 'PDF tools for students')"
+
+  technical_seo:
+    - "Fast page load times"
+    - "Mobile-first indexing ready"
+    - "Structured data markup"
+    - "XML sitemap"
+    - "Canonical URLs"
+    - "Hreflang for future localization"
+
+# ------------------------------------------------------------------------------
+# NOTES FOR AGENTS
+# ------------------------------------------------------------------------------
+
+notes_for_agents:
+  architect:
+    - "Design file processing pipeline (upload -> validate -> process -> deliver)"
+    - "Plan hybrid approach: client-side for small files, server for large/complex"
+    - "Design queue system for heavy processing (LibreOffice conversions)"
+    - "Consider serverless functions with reasonable timeouts"
+    - "Plan for horizontal scaling of processing workers"
+
+  planner:
+    - "Prioritize PDF tools first (highest search volume)"
+    - "Group related tools (all PDF conversions, all image tools)"
+    - "Plan for reusable components (file uploader, progress, download)"
+    - "Include SEO optimization in each tool's tasks"
+    - "Account for testing each conversion type thoroughly"
+
+  backend:
+    - "Use pdf-lib for most PDF operations (fast, no dependencies)"
+    - "Set up LibreOffice in Docker for Office format conversions"
+    - "Implement proper file cleanup (cron job + immediate delete)"
+    - "Use streams for large file handling"
+    - "Implement request signing for secure download URLs"
+    - "Set up proper error handling and logging"
+
+  frontend:
+    - "Build reusable FileUploader component with drag-drop"
+    - "Create consistent tool page layout template"
+    - "Implement client-side file validation (type, size)"
+    - "Show meaningful progress indicators"
+    - "Handle errors gracefully with retry options"
+    - "Optimize for mobile (many users convert on phones)"
+    - "Lazy load tool pages for faster initial load"
+
+  qa:
+    - "Test with various file types and edge cases"
+    - "Test corrupted/malformed files"
+    - "Test file size limits"
+    - "Test rate limiting"
+    - "Cross-browser testing (especially file handling)"
+    - "Mobile testing"
+    - "Performance testing for large files"
+    - "Security testing (file upload vulnerabilities)"
+
+  devops:
+    - "Set up Vercel project with environment variables"
+    - "Configure file storage (S3/R2) with lifecycle policies"
+    - "Set up monitoring and alerting"
+    - "Configure CDN for static assets"
+    - "Set up CI/CD with test requirements"
+    - "Plan for worker instances (LibreOffice processing)"
+
+  docs:
+    - "Create API documentation for future public API"
+    - "Document each tool's capabilities and limitations"
+    - "Write user-facing help content"
+    - "Document development setup"
+    - "Create architecture diagrams"
+
+# ==============================================================================
+# END OF PROJECT DESCRIPTION
+# ==============================================================================

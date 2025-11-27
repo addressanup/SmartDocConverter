@@ -27,6 +27,23 @@ agents/*/output/*
 *.sqlite
 coverage/
 .nyc_output/
+
+# Next.js
+.next/
+tsconfig.tsbuildinfo
+
+# Uploads (user files)
+uploads/
+tmp/
+
+# MCP config (contains credentials)
+.mcp.json
+
+# Playwright
+test-results/
+playwright-report/
+playwright/.cache/
+
 SHARED_CONTEXT.json
 orchestrator.db
 agents/*/TODOS.md

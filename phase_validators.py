@@ -179,33 +179,52 @@ class Phase3Validator(PhaseValidator):
     def validate(self) -> Tuple[bool, List[str]]:
         errors = []
 
-        # Check that at least one feature has been implemented
+        # Support both traditional backend/frontend split and Next.js monorepo
         backend_base = self.project_root / "backend" / "src"
         frontend_base = self.project_root / "frontend" / "src"
+        nextjs_base = self.project_root / "src"  # Next.js fullstack structure
 
-        # Look for implementation files
-        if backend_base.exists():
-            route_files = list(backend_base.glob("routes/*.ts")) + list(backend_base.glob("routes/*.js"))
-            if not route_files:
-                errors.append("No backend route files found in backend/src/routes/")
+        # Check for Next.js monorepo structure first
+        if nextjs_base.exists():
+            # Next.js: Check for API routes
+            api_routes = list(nextjs_base.glob("app/api/**/*.ts"))
+            if not api_routes:
+                errors.append("No API route files found in src/app/api/")
+
+            # Next.js: Check for components
+            component_files = list(nextjs_base.glob("components/**/*.tsx"))
+            if not component_files:
+                errors.append("No components found in src/components/")
+
+            # Check for tests in Next.js structure
+            tests_dir = self.project_root / "__tests__"
+            if not tests_dir.exists() or not list(tests_dir.glob("**/*.test.*")):
+                errors.append("No tests found in __tests__/")
+
         else:
-            errors.append("Backend src directory not found")
+            # Traditional split structure
+            if backend_base.exists():
+                route_files = list(backend_base.glob("routes/*.ts")) + list(backend_base.glob("routes/*.js"))
+                if not route_files:
+                    errors.append("No backend route files found in backend/src/routes/")
+            else:
+                errors.append("Backend src directory not found")
 
-        if frontend_base.exists():
-            component_dirs = list(frontend_base.glob("components/*"))
-            if not component_dirs:
-                errors.append("No frontend components found in frontend/src/components/")
-        else:
-            errors.append("Frontend src directory not found")
+            if frontend_base.exists():
+                component_dirs = list(frontend_base.glob("components/*"))
+                if not component_dirs:
+                    errors.append("No frontend components found in frontend/src/components/")
+            else:
+                errors.append("Frontend src directory not found")
 
-        # Check for tests
-        backend_tests = self.project_root / "backend" / "tests"
-        if not backend_tests.exists() or not list(backend_tests.glob("**/*.test.*")):
-            errors.append("No backend tests found")
+            # Check for tests
+            backend_tests = self.project_root / "backend" / "tests"
+            if not backend_tests.exists() or not list(backend_tests.glob("**/*.test.*")):
+                errors.append("No backend tests found")
 
-        frontend_tests = self.project_root / "frontend" / "tests"
-        if not frontend_tests.exists() or not list(frontend_tests.glob("**/*.test.*")):
-            errors.append("No frontend tests found")
+            frontend_tests = self.project_root / "frontend" / "tests"
+            if not frontend_tests.exists() or not list(frontend_tests.glob("**/*.test.*")):
+                errors.append("No frontend tests found")
 
         return (len(errors) == 0, errors)
 
@@ -216,14 +235,23 @@ class Phase4Validator(PhaseValidator):
     def validate(self) -> Tuple[bool, List[str]]:
         errors = []
 
-        # Check Docker files
-        backend_dockerfile = self.project_root / "backend" / "Dockerfile"
-        if not backend_dockerfile.exists():
-            errors.append("Missing: backend/Dockerfile")
+        # Support both traditional split and Next.js monorepo structures
+        nextjs_base = self.project_root / "src"
 
-        frontend_dockerfile = self.project_root / "frontend" / "Dockerfile"
-        if not frontend_dockerfile.exists():
-            errors.append("Missing: frontend/Dockerfile")
+        if nextjs_base.exists():
+            # Next.js: Single Dockerfile at root
+            dockerfile = self.project_root / "Dockerfile"
+            if not dockerfile.exists():
+                errors.append("Missing: Dockerfile")
+        else:
+            # Traditional: Separate dockerfiles
+            backend_dockerfile = self.project_root / "backend" / "Dockerfile"
+            if not backend_dockerfile.exists():
+                errors.append("Missing: backend/Dockerfile")
+
+            frontend_dockerfile = self.project_root / "frontend" / "Dockerfile"
+            if not frontend_dockerfile.exists():
+                errors.append("Missing: frontend/Dockerfile")
 
         # Check docker-compose
         docker_compose = self.project_root / "docker-compose.yml"
