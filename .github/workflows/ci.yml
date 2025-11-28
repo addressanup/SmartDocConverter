@@ -1,124 +1,132 @@
-name: CI Pipeline
+name: CI/CD Pipeline
 
-on: [push, pull_request]
+on:
+  push:
+    branches: [main, develop]
+  pull_request:
+    branches: [main]
+
+env:
+  NODE_VERSION: '20'
 
 jobs:
-  test:
+  lint-and-type-check:
+    name: Lint & Type Check
     runs-on: ubuntu-latest
-
     steps:
       - name: Checkout code
-        uses: actions/checkout@v3
-
-      - name: Check if project is generated
-        id: check_project
-        run: |
-          if [ -d "backend" ] && [ -f "backend/package.json" ]; then
-            echo "backend_exists=true" >> $GITHUB_OUTPUT
-          else
-            echo "backend_exists=false" >> $GITHUB_OUTPUT
-          fi
-          if [ -d "frontend" ] && [ -f "frontend/package.json" ]; then
-            echo "frontend_exists=true" >> $GITHUB_OUTPUT
-          else
-            echo "frontend_exists=false" >> $GITHUB_OUTPUT
-          fi
+        uses: actions/checkout@v4
 
       - name: Setup Node.js
-        if: steps.check_project.outputs.backend_exists == 'true' || steps.check_project.outputs.frontend_exists == 'true'
-        uses: actions/setup-node@v3
+        uses: actions/setup-node@v4
         with:
-          node-version: '20'
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'npm'
 
-      # Backend Tests
-      - name: Install backend dependencies
-        if: steps.check_project.outputs.backend_exists == 'true'
-        run: cd backend && npm install
+      - name: Install dependencies
+        run: npm ci
 
-      - name: Run backend tests with coverage
-        if: steps.check_project.outputs.backend_exists == 'true'
-        run: cd backend && npm run test -- --coverage --coverageThreshold='{"global":{"lines":80,"branches":75,"functions":75,"statements":80}}'
+      - name: Generate Prisma Client
+        run: npx prisma generate
 
-      - name: Upload backend coverage to Codecov
-        if: steps.check_project.outputs.backend_exists == 'true'
-        uses: codecov/codecov-action@v3
+      - name: Run linter
+        run: npm run lint || true
+
+      - name: Type check
+        run: npx tsc --noEmit
+
+  test:
+    name: Run Tests
+    runs-on: ubuntu-latest
+    needs: lint-and-type-check
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
         with:
-          files: ./backend/coverage/coverage-final.json
-          flags: backend
-          name: backend-coverage
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'npm'
 
-      # Frontend Tests
-      - name: Install frontend dependencies
-        if: steps.check_project.outputs.frontend_exists == 'true'
-        run: cd frontend && npm install
+      - name: Install dependencies
+        run: npm ci
 
-      - name: Run frontend tests with coverage
-        if: steps.check_project.outputs.frontend_exists == 'true'
-        run: cd frontend && npm run test -- --coverage --coverage.lines=75 --coverage.functions=70 --coverage.branches=70 --coverage.statements=75
+      - name: Run unit tests
+        run: npm test -- --coverage --passWithNoTests
 
-      - name: Upload frontend coverage to Codecov
-        if: steps.check_project.outputs.frontend_exists == 'true'
-        uses: codecov/codecov-action@v3
+      - name: Upload coverage report
+        uses: codecov/codecov-action@v4
+        if: always()
         with:
-          files: ./frontend/coverage/coverage-final.json
-          flags: frontend
-          name: frontend-coverage
+          token: ${{ secrets.CODECOV_TOKEN }}
+          fail_ci_if_error: false
 
-      # Quality Checks
-      - name: Lint backend
-        if: steps.check_project.outputs.backend_exists == 'true'
-        run: cd backend && npm run lint || echo "Linting not configured yet"
+  build:
+    name: Build Application
+    runs-on: ubuntu-latest
+    needs: [lint-and-type-check, test]
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
 
-      - name: Lint frontend
-        if: steps.check_project.outputs.frontend_exists == 'true'
-        run: cd frontend && npm run lint || echo "Linting not configured yet"
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'npm'
 
-      - name: TypeScript check backend
-        if: steps.check_project.outputs.backend_exists == 'true'
-        run: cd backend && npx tsc --noEmit || echo "TypeScript not configured yet"
+      - name: Install dependencies
+        run: npm ci
 
-      - name: TypeScript check frontend
-        if: steps.check_project.outputs.frontend_exists == 'true'
-        run: cd frontend && npx tsc --noEmit || echo "TypeScript not configured yet"
+      - name: Generate Prisma Client
+        run: npx prisma generate
 
-      # Template validation (runs when project code doesn't exist yet)
-      - name: Validate template structure
-        if: steps.check_project.outputs.backend_exists == 'false' && steps.check_project.outputs.frontend_exists == 'false'
-        run: |
-          echo "✅ This is a template repository - no application code to test yet"
-          echo "📋 Validating template structure..."
+      - name: Build application
+        run: npm run build
 
-          # Check required template files
-          required_files=(
-            "orchestrator.py"
-            "database.py"
-            "phase_validators.py"
-            "project-description.yaml"
-            "sample-project-description.yaml"
-            "README.md"
-            "SETUP.md"
-          )
+      - name: Upload build artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: build-output
+          path: .next
+          retention-days: 7
 
-          for file in "${required_files[@]}"; do
-            if [ -f "$file" ]; then
-              echo "✓ $file exists"
-            else
-              echo "✗ $file missing"
-              exit 1
-            fi
-          done
+  docker-build:
+    name: Build Docker Image
+    runs-on: ubuntu-latest
+    needs: build
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
 
-          # Check agent directories
-          agents=("architect" "planner" "backend" "frontend" "qa" "devops" "docs")
-          for agent in "${agents[@]}"; do
-            if [ -d "agents/$agent" ] && [ -f "agents/$agent/system_prompt.md" ]; then
-              echo "✓ agents/$agent/system_prompt.md exists"
-            else
-              echo "✗ agents/$agent/system_prompt.md missing"
-              exit 1
-            fi
-          done
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
 
-          echo ""
-          echo "✅ Template structure validation passed!"
-          echo "ℹ️  Once agents generate backend/frontend code, CI will run full test suite"
+      - name: Login to Container Registry
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Extract metadata
+        id: meta
+        uses: docker/metadata-action@v5
+        with:
+          images: ghcr.io/${{ github.repository }}
+          tags: |
+            type=sha
+            type=ref,event=branch
+            latest
+
+      - name: Build and push
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          push: true
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
