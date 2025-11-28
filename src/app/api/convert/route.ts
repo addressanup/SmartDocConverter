@@ -3,24 +3,41 @@ import { randomUUID } from 'crypto'
 import fs from 'fs'
 import path from 'path'
 
-// Force Node.js runtime for file system operations
 export const runtime = 'nodejs'
 export const dynamic = 'force-dynamic'
-import { convertPdfToWord } from '@/lib/converters/pdf-to-word'
-import { convertWordToPdf } from '@/lib/converters/word-to-pdf'
-import { compressPdf } from '@/lib/converters/compress-pdf'
-import { convertImageToText } from '@/lib/converters/image-to-text'
-import { convertJpgToPdf } from '@/lib/converters/jpg-to-pdf'
-import { convertPdfToJpg } from '@/lib/converters/pdf-to-jpg'
-import { convertPdfToExcel } from '@/lib/converters/pdf-to-excel'
-import { splitPdf } from '@/lib/converters/split-pdf'
-import { mergePdfs } from '@/lib/converters/merge-pdf'
-import { unlockPdf } from '@/lib/converters/unlock-pdf'
-import { rotatePdf } from '@/lib/converters/rotate-pdf'
-import { protectPdf, ProtectPdfOptions } from '@/lib/converters/protect-pdf'
-import { auth } from '@/lib/auth'
-import { checkRateLimit, checkIpRateLimit, getClientIp } from '@/lib/ratelimit'
-import { checkUsageLimit, incrementUsage, getUserTier } from '@/lib/usage'
+export const maxDuration = 60
+
+// Lazy load converters to avoid cold start issues
+async function getConverter(type: string) {
+  switch (type) {
+    case 'pdf-to-word':
+      return (await import('@/lib/converters/pdf-to-word')).convertPdfToWord
+    case 'word-to-pdf':
+      return (await import('@/lib/converters/word-to-pdf')).convertWordToPdf
+    case 'compress-pdf':
+      return (await import('@/lib/converters/compress-pdf')).compressPdf
+    case 'merge-pdf':
+      return (await import('@/lib/converters/merge-pdf')).mergePdfs
+    case 'split-pdf':
+      return (await import('@/lib/converters/split-pdf')).splitPdf
+    case 'rotate-pdf':
+      return (await import('@/lib/converters/rotate-pdf')).rotatePdf
+    case 'protect-pdf':
+      return (await import('@/lib/converters/protect-pdf')).protectPdf
+    case 'unlock-pdf':
+      return (await import('@/lib/converters/unlock-pdf')).unlockPdf
+    case 'pdf-to-jpg':
+      return (await import('@/lib/converters/pdf-to-jpg')).convertPdfToJpg
+    case 'jpg-to-pdf':
+      return (await import('@/lib/converters/jpg-to-pdf')).convertJpgToPdf
+    case 'pdf-to-excel':
+      return (await import('@/lib/converters/pdf-to-excel')).convertPdfToExcel
+    case 'image-to-text':
+      return (await import('@/lib/converters/image-to-text')).convertImageToText
+    default:
+      return null
+  }
+}
 
 export type ConversionType =
   | 'pdf-to-word'
@@ -36,15 +53,6 @@ export type ConversionType =
   | 'rotate-pdf'
   | 'protect-pdf'
 
-interface ConversionRequest {
-  fileId: string
-  filePath: string
-  conversionType: ConversionType
-  options?: Record<string, unknown>
-  fileSize?: number
-  filePaths?: string[] // For merge-pdf conversion type
-}
-
 interface ConversionJob {
   jobId: string
   status: 'queued' | 'processing' | 'completed' | 'failed'
@@ -54,8 +62,7 @@ interface ConversionJob {
   metadata?: Record<string, any>
 }
 
-// In-memory job storage (in production, use Redis or a database)
-// Using global object to share state across API routes
+// In-memory job storage
 const getJobsMap = (): Map<string, ConversionJob> => {
   if (!(global as any).__conversionJobs) {
     (global as any).__conversionJobs = new Map<string, ConversionJob>()
@@ -65,125 +72,52 @@ const getJobsMap = (): Map<string, ConversionJob> => {
 
 export async function POST(request: NextRequest) {
   try {
-    // Get session and user info
-    const session = await auth()
-    const userId = session?.user?.id || null
-
-    // Get client IP and fingerprint
-    const ipAddress = getClientIp(request)
-    const fingerprint = request.headers.get('x-fingerprint') || null
-
-    // Check IP-based rate limit first (abuse prevention)
-    const ipRateLimit = await checkIpRateLimit(ipAddress)
-    if (!ipRateLimit.success) {
+    console.log('[Convert] Starting...')
+    
+    let body: any
+    try {
+      body = await request.json()
+      console.log('[Convert] Body:', JSON.stringify(body))
+    } catch (e) {
+      console.error('[Convert] JSON parse error:', e)
       return NextResponse.json(
-        {
-          error: 'Too many requests from this IP address. Please try again later.',
-          resetAt: new Date(ipRateLimit.reset).toISOString(),
-        },
-        {
-          status: 429,
-          headers: {
-            'X-RateLimit-Limit': ipRateLimit.limit.toString(),
-            'X-RateLimit-Remaining': ipRateLimit.remaining.toString(),
-            'X-RateLimit-Reset': ipRateLimit.reset.toString(),
-            'Retry-After': Math.ceil((ipRateLimit.reset - Date.now()) / 1000).toString(),
-          },
-        }
-      )
-    }
-
-    // Get user tier
-    const tier = await getUserTier(userId)
-
-    // Check user rate limit
-    const identifier = userId || fingerprint || ipAddress
-    const rateLimit = await checkRateLimit(identifier, tier)
-
-    if (!rateLimit.success) {
-      return NextResponse.json(
-        {
-          error: `Daily limit of ${rateLimit.limit} conversions reached. ${
-            tier === 'FREE' || tier === 'ANONYMOUS'
-              ? 'Upgrade to Premium for unlimited conversions.'
-              : 'Please try again tomorrow.'
-          }`,
-          resetAt: new Date(rateLimit.reset).toISOString(),
-          tier,
-          limit: rateLimit.limit,
-          remaining: rateLimit.remaining,
-        },
-        {
-          status: 429,
-          headers: {
-            'X-RateLimit-Limit': rateLimit.limit.toString(),
-            'X-RateLimit-Remaining': rateLimit.remaining.toString(),
-            'X-RateLimit-Reset': rateLimit.reset.toString(),
-            'Retry-After': Math.ceil((rateLimit.reset - Date.now()) / 1000).toString(),
-          },
-        }
-      )
-    }
-
-    // Check usage limit from database
-    const usageCheck = await checkUsageLimit(userId, fingerprint, ipAddress)
-    if (!usageCheck.allowed) {
-      return NextResponse.json(
-        {
-          error: usageCheck.message || 'Daily conversion limit exceeded.',
-          usage: usageCheck.usage,
-          tier,
-        },
-        {
-          status: 429,
-          headers: {
-            'X-RateLimit-Limit': usageCheck.usage.dailyLimit.toString(),
-            'X-RateLimit-Remaining': usageCheck.usage.conversionsRemaining.toString(),
-            'X-RateLimit-Reset': usageCheck.usage.resetDate.getTime().toString(),
-          },
-        }
-      )
-    }
-
-    // Parse request body
-    const body: ConversionRequest = await request.json()
-    const { fileId, filePath, conversionType, options, fileSize, filePaths } = body
-
-    if (!fileId || !conversionType) {
-      return NextResponse.json(
-        { error: 'Missing required fields' },
+        { error: 'Invalid JSON body' },
         { status: 400 }
       )
     }
 
-    // For merge-pdf, validate filePaths array
+    const { fileId, filePath, conversionType, options, filePaths } = body
+
+    if (!fileId || !conversionType) {
+      return NextResponse.json(
+        { error: 'Missing required fields: fileId and conversionType' },
+        { status: 400 }
+      )
+    }
+
+    // For merge-pdf, validate filePaths
     if (conversionType === 'merge-pdf') {
       if (!filePaths || !Array.isArray(filePaths) || filePaths.length < 2) {
         return NextResponse.json(
-          { error: 'At least two file paths are required for merging PDFs' },
+          { error: 'At least two file paths required for merge' },
           { status: 400 }
         )
       }
-
-      // Verify all files exist
-      for (const path of filePaths) {
-        if (!fs.existsSync(path)) {
+      for (const fp of filePaths) {
+        if (!fs.existsSync(fp)) {
           return NextResponse.json(
-            { error: `Input file not found: ${path}` },
+            { error: `File not found: ${fp}` },
             { status: 404 }
           )
         }
       }
     } else {
-      // For other conversion types, validate single filePath
       if (!filePath) {
         return NextResponse.json(
           { error: 'Missing filePath' },
           { status: 400 }
         )
       }
-
-      // Verify file exists
       if (!fs.existsSync(filePath)) {
         return NextResponse.json(
           { error: 'Input file not found' },
@@ -192,56 +126,41 @@ export async function POST(request: NextRequest) {
       }
     }
 
-    // Generate job ID
     const jobId = randomUUID()
-
-    // Increment usage counter immediately
-    // This prevents race conditions where multiple requests could be made before the first completes
-    const updatedUsage = await incrementUsage(userId, fingerprint, ipAddress, fileSize)
-
-    // Get jobs map
     const jobs = getJobsMap()
 
-    // Initialize job
     jobs.set(jobId, {
       jobId,
       status: 'queued',
       progress: 0,
     })
 
-    // Process conversion asynchronously
+    // Process async
     processConversion(jobId, filePath, conversionType, options || {}, filePaths).catch((error) => {
-      console.error(`Job ${jobId} failed:`, error)
-      const jobs = getJobsMap()
+      console.error(`[Convert] Job ${jobId} failed:`, error)
       jobs.set(jobId, {
         jobId,
         status: 'failed',
         progress: 0,
-        error: error.message,
+        error: error instanceof Error ? error.message : String(error),
       })
     })
 
-    return NextResponse.json(
-      {
-        success: true,
-        jobId,
-        status: 'queued',
-        message: 'Conversion job created',
-        usage: updatedUsage,
-      },
-      {
-        status: 200,
-        headers: {
-          'X-RateLimit-Limit': rateLimit.limit.toString(),
-          'X-RateLimit-Remaining': Math.max(0, rateLimit.remaining - 1).toString(),
-          'X-RateLimit-Reset': rateLimit.reset.toString(),
-        },
-      }
-    )
+    console.log('[Convert] Job created:', jobId)
+
+    return NextResponse.json({
+      success: true,
+      jobId,
+      status: 'queued',
+      message: 'Conversion job created',
+    })
   } catch (error) {
-    console.error('Conversion error:', error)
+    console.error('[Convert] Error:', error)
     return NextResponse.json(
-      { error: 'Failed to create conversion job' },
+      { 
+        error: 'Failed to create conversion job',
+        details: error instanceof Error ? error.message : String(error)
+      },
       { status: 500 }
     )
   }
@@ -250,95 +169,43 @@ export async function POST(request: NextRequest) {
 async function processConversion(
   jobId: string,
   filePath: string,
-  conversionType: ConversionType,
+  conversionType: string,
   options: Record<string, unknown>,
   filePaths?: string[]
 ) {
+  const jobs = getJobsMap()
+
   try {
-    const jobs = getJobsMap()
+    jobs.set(jobId, { jobId, status: 'processing', progress: 10 })
+    console.log(`[Convert] Processing ${jobId}: ${conversionType}`)
 
-    // Update job status to processing
-    jobs.set(jobId, {
-      jobId,
-      status: 'processing',
-      progress: 10,
-    })
-
-    console.log(`Processing job ${jobId}: ${conversionType}`)
+    const converter = await getConverter(conversionType)
+    if (!converter) {
+      throw new Error(`Unsupported conversion type: ${conversionType}`)
+    }
 
     let outputPath: string
     let metadata: Record<string, any> | undefined
 
-    // Route to appropriate converter
-    switch (conversionType) {
-      case 'pdf-to-word':
-        outputPath = await convertPdfToWord(filePath, options)
-        break
-
-      case 'word-to-pdf':
-        outputPath = await convertWordToPdf(filePath, options)
-        break
-
-      case 'compress-pdf':
-        // compressPdf now returns metadata if we modify it, but current signature returns string
-        // We need to modify compressPdf signature first or just read the file size here
-        outputPath = await compressPdf(filePath, options)
-        // Calculate compression stats
-        if (fs.existsSync(filePath) && fs.existsSync(outputPath)) {
-          const originalSize = fs.statSync(filePath).size
-          const compressedSize = fs.statSync(outputPath).size
-          metadata = {
-            originalSize,
-            compressedSize,
-            compressionRatio: ((1 - compressedSize / originalSize) * 100).toFixed(2)
-          }
-        }
-        break
-
-      case 'image-to-text':
-        outputPath = await convertImageToText(filePath, options)
-        break
-
-      case 'jpg-to-pdf':
-        outputPath = await convertJpgToPdf(filePath, options)
-        break
-
-      case 'pdf-to-jpg':
-        outputPath = await convertPdfToJpg(filePath, options)
-        break
-
-      case 'pdf-to-excel':
-        outputPath = await convertPdfToExcel(filePath, options)
-        break
-
-      case 'merge-pdf':
-        if (!filePaths || filePaths.length < 2) {
-          throw new Error('At least two file paths are required for merging PDFs')
-        }
-        outputPath = await mergePdfs(filePaths, options)
-        break
-
-      case 'split-pdf':
-        outputPath = await splitPdf(filePath, options)
-        break
-
-      case 'unlock-pdf':
-        outputPath = await unlockPdf(filePath, options)
-        break
-
-      case 'rotate-pdf':
-        outputPath = await rotatePdf(filePath, options)
-        break
-
-      case 'protect-pdf':
-        outputPath = await protectPdf(filePath, options as unknown as ProtectPdfOptions)
-        break
-
-      default:
-        throw new Error(`Unsupported conversion type: ${conversionType}`)
+    if (conversionType === 'merge-pdf' && filePaths) {
+      outputPath = await (converter as any)(filePaths, options)
+    } else if (conversionType === 'protect-pdf') {
+      outputPath = await (converter as any)(filePath, options)
+    } else {
+      outputPath = await (converter as any)(filePath, options)
     }
 
-    // Update job as completed
+    // Get compression metadata if applicable
+    if (conversionType === 'compress-pdf' && fs.existsSync(filePath) && fs.existsSync(outputPath)) {
+      const originalSize = fs.statSync(filePath).size
+      const compressedSize = fs.statSync(outputPath).size
+      metadata = {
+        originalSize,
+        compressedSize,
+        compressionRatio: ((1 - compressedSize / originalSize) * 100).toFixed(2)
+      }
+    }
+
     jobs.set(jobId, {
       jobId,
       status: 'completed',
@@ -347,65 +214,65 @@ async function processConversion(
       metadata
     })
 
-    console.log(`Job ${jobId} completed: ${outputPath}`)
+    console.log(`[Convert] Job ${jobId} completed: ${outputPath}`)
   } catch (error) {
-    console.error(`Job ${jobId} failed:`, error)
-    const jobs = getJobsMap()
+    console.error(`[Convert] Job ${jobId} error:`, error)
     jobs.set(jobId, {
       jobId,
       status: 'failed',
       progress: 0,
-      error: error instanceof Error ? error.message : 'Unknown error',
+      error: error instanceof Error ? error.message : String(error),
     })
   }
 }
 
 export async function GET(request: NextRequest) {
-  const searchParams = request.nextUrl.searchParams
-  const jobId = searchParams.get('jobId')
+  try {
+    const jobId = request.nextUrl.searchParams.get('jobId')
 
-  if (!jobId) {
+    if (!jobId) {
+      return NextResponse.json(
+        { error: 'Job ID required' },
+        { status: 400 }
+      )
+    }
+
+    const jobs = getJobsMap()
+    const job = jobs.get(jobId)
+
+    if (!job) {
+      return NextResponse.json(
+        { error: 'Job not found' },
+        { status: 404 }
+      )
+    }
+
+    const response: any = {
+      jobId: job.jobId,
+      status: job.status,
+      progress: job.progress,
+      metadata: job.metadata
+    }
+
+    if (job.status === 'completed' && job.outputPath) {
+      const filename = path.basename(job.outputPath)
+      response.downloadUrl = `/api/download/${jobId}?filename=${encodeURIComponent(filename)}`
+    }
+
+    if (job.status === 'failed' && job.error) {
+      response.error = job.error
+    }
+
+    return NextResponse.json(response)
+  } catch (error) {
+    console.error('[Convert] GET Error:', error)
     return NextResponse.json(
-      { error: 'Job ID required' },
-      { status: 400 }
+      { error: 'Failed to get job status' },
+      { status: 500 }
     )
   }
-
-  // Get jobs map
-  const jobs = getJobsMap()
-
-  // Look up job status
-  const job = jobs.get(jobId)
-
-  if (!job) {
-    return NextResponse.json(
-      { error: 'Job not found' },
-      { status: 404 }
-    )
-  }
-
-  // Build response based on job status
-  const response: any = {
-    jobId: job.jobId,
-    status: job.status,
-    progress: job.progress,
-    metadata: job.metadata
-  }
-
-  if (job.status === 'completed' && job.outputPath) {
-    // Generate download URL with the output filename
-    const filename = path.basename(job.outputPath)
-    response.downloadUrl = `/api/download/${jobId}?filename=${encodeURIComponent(filename)}`
-  }
-
-  if (job.status === 'failed' && job.error) {
-    response.error = job.error
-  }
-
-  return NextResponse.json(response)
 }
 
-// Handle CORS preflight requests
 export async function OPTIONS() {
   return new NextResponse(null, {
     status: 200,

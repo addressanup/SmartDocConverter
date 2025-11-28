@@ -2,13 +2,8 @@ import { NextRequest, NextResponse } from 'next/server'
 import fs from 'fs'
 import path from 'path'
 
-// Force Node.js runtime for file system operations
 export const runtime = 'nodejs'
 export const dynamic = 'force-dynamic'
-
-// Import the jobs map from the convert route
-// Note: In production, this should be stored in Redis or a database
-// For now, we'll need to access it via a shared module
 
 interface ConversionJob {
   jobId: string
@@ -18,11 +13,7 @@ interface ConversionJob {
   error?: string
 }
 
-// This is a workaround - in production, use proper state management
-// We'll export this from a shared module
 const getJobsMap = (): Map<string, ConversionJob> => {
-  // Access the jobs map from the module cache
-  // This is a hack - in production, use Redis or a database
   if (!(global as any).__conversionJobs) {
     (global as any).__conversionJobs = new Map<string, ConversionJob>()
   }
@@ -35,72 +26,56 @@ export async function GET(
 ) {
   try {
     const jobId = params.jobId
-    const searchParams = request.nextUrl.searchParams
-    const filename = searchParams.get('filename')
+    const filename = request.nextUrl.searchParams.get('filename')
 
     if (!jobId) {
-      return NextResponse.json(
-        { error: 'Job ID required' },
-        { status: 400 }
-      )
+      return NextResponse.json({ error: 'Job ID required' }, { status: 400 })
     }
 
-    // Get job from storage
     const jobs = getJobsMap()
     const job = jobs.get(jobId)
 
     if (!job) {
-      return NextResponse.json(
-        { error: 'Job not found' },
-        { status: 404 }
-      )
+      return NextResponse.json({ error: 'Job not found' }, { status: 404 })
     }
 
     if (job.status !== 'completed' || !job.outputPath) {
-      return NextResponse.json(
-        { error: 'File not ready for download' },
-        { status: 400 }
-      )
+      return NextResponse.json({ error: 'File not ready' }, { status: 400 })
     }
 
-    // Check if file exists
     if (!fs.existsSync(job.outputPath)) {
-      return NextResponse.json(
-        { error: 'Output file not found' },
-        { status: 404 }
-      )
+      return NextResponse.json({ error: 'Output file not found' }, { status: 404 })
     }
 
-    // Read file
     const fileBuffer = fs.readFileSync(job.outputPath)
     const fileExt = path.extname(job.outputPath).toLowerCase()
 
-    // Determine content type
     const contentTypeMap: Record<string, string> = {
       '.pdf': 'application/pdf',
       '.docx': 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+      '.xlsx': 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
       '.txt': 'text/plain',
-      '.json': 'application/json',
       '.jpg': 'image/jpeg',
       '.jpeg': 'image/jpeg',
       '.png': 'image/png',
+      '.zip': 'application/zip',
     }
 
     const contentType = contentTypeMap[fileExt] || 'application/octet-stream'
     const downloadFilename = filename || path.basename(job.outputPath)
 
-    // Return file with appropriate headers
     return new NextResponse(fileBuffer, {
       headers: {
         'Content-Type': contentType,
         'Content-Disposition': `attachment; filename="${downloadFilename}"`,
         'Content-Length': fileBuffer.length.toString(),
+        'Access-Control-Allow-Origin': '*',
       },
     })
   } catch (error) {
-    console.error('Download error:', error)
+    console.error('[Download] Error:', error)
     return NextResponse.json(
-      { error: 'Failed to download file' },
+      { error: 'Download failed', details: error instanceof Error ? error.message : String(error) },
       { status: 500 }
     )
   }
