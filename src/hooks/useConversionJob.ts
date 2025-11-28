@@ -22,6 +22,7 @@ export interface UseConversionJobReturn {
   progress: number
   downloadUrl: string | null
   error: string | null
+  metadata: Record<string, any> | null
   startConversion: (file: File, conversionType: string, options?: Record<string, unknown>) => Promise<void>
   startMultiFileConversion: (files: File[], conversionType: string, options?: Record<string, unknown>) => Promise<void>
   reset: () => void
@@ -35,6 +36,7 @@ export function useConversionJob(opts: UseConversionJobOptions = {}): UseConvers
   const [progress, setProgress] = useState(0)
   const [downloadUrl, setDownloadUrl] = useState<string | null>(null)
   const [error, setError] = useState<string | null>(null)
+  const [metadata, setMetadata] = useState<Record<string, any> | null>(null)
 
   const pollTimeoutRef = useRef<NodeJS.Timeout | null>(null)
   const startTimeRef = useRef<number>(0)
@@ -54,15 +56,18 @@ export function useConversionJob(opts: UseConversionJobOptions = {}): UseConvers
         throw new Error('Failed to check job status')
       }
 
-      const job: ConversionJob = await response.json()
+      const job: ConversionJob & { metadata?: Record<string, any> } = await response.json()
 
       if (job.status === 'completed') {
         setStatus('completed')
         setProgress(100)
         setDownloadUrl(job.downloadUrl || null)
+        setMetadata(job.metadata || null)
         clearPolling()
         return
       }
+      
+      // ... rest of the function ...
 
       if (job.status === 'failed') {
         setStatus('failed')
@@ -104,6 +109,7 @@ export function useConversionJob(opts: UseConversionJobOptions = {}): UseConvers
       setProgress(10)
       setError(null)
       setDownloadUrl(null)
+      setMetadata(null)
       startTimeRef.current = Date.now()
 
       // Upload file
@@ -164,6 +170,7 @@ export function useConversionJob(opts: UseConversionJobOptions = {}): UseConvers
       setProgress(5)
       setError(null)
       setDownloadUrl(null)
+      setMetadata(null)
       startTimeRef.current = Date.now()
 
       // Upload all files
@@ -231,6 +238,7 @@ export function useConversionJob(opts: UseConversionJobOptions = {}): UseConvers
     setProgress(0)
     setDownloadUrl(null)
     setError(null)
+    setMetadata(null)
   }, [clearPolling])
 
   const download = useCallback(() => {
@@ -244,6 +252,7 @@ export function useConversionJob(opts: UseConversionJobOptions = {}): UseConvers
     progress,
     downloadUrl,
     error,
+    metadata,
     startConversion,
     startMultiFileConversion,
     reset,

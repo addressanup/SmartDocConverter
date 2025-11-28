@@ -47,6 +47,7 @@ interface ConversionJob {
   progress: number
   outputPath?: string
   error?: string
+  metadata?: Record<string, any>
 }
 
 // In-memory job storage (in production, use Redis or a database)
@@ -262,6 +263,7 @@ async function processConversion(
     console.log(`Processing job ${jobId}: ${conversionType}`)
 
     let outputPath: string
+    let metadata: Record<string, any> | undefined
 
     // Route to appropriate converter
     switch (conversionType) {
@@ -274,7 +276,19 @@ async function processConversion(
         break
 
       case 'compress-pdf':
+        // compressPdf now returns metadata if we modify it, but current signature returns string
+        // We need to modify compressPdf signature first or just read the file size here
         outputPath = await compressPdf(filePath, options)
+        // Calculate compression stats
+        if (fs.existsSync(filePath) && fs.existsSync(outputPath)) {
+          const originalSize = fs.statSync(filePath).size
+          const compressedSize = fs.statSync(outputPath).size
+          metadata = {
+            originalSize,
+            compressedSize,
+            compressionRatio: ((1 - compressedSize / originalSize) * 100).toFixed(2)
+          }
+        }
         break
 
       case 'image-to-text':
@@ -326,6 +340,7 @@ async function processConversion(
       status: 'completed',
       progress: 100,
       outputPath,
+      metadata
     })
 
     console.log(`Job ${jobId} completed: ${outputPath}`)
@@ -370,6 +385,7 @@ export async function GET(request: NextRequest) {
     jobId: job.jobId,
     status: job.status,
     progress: job.progress,
+    metadata: job.metadata
   }
 
   if (job.status === 'completed' && job.outputPath) {

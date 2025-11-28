@@ -5,7 +5,7 @@ import archiver from 'archiver';
 
 export interface SplitPdfOptions {
   outputDir?: string;
-  mode?: 'all' | 'range' | 'every';  // all=each page, range=specific pages, every=every N pages
+  mode?: 'all' | 'range' | 'every' | 'custom';  // custom is alias for range
   pages?: string;  // e.g., "1-3,5,7-10"
   everyN?: number;  // split every N pages
 }
@@ -118,9 +118,10 @@ function parseSplitRanges(
       break;
 
     case 'range':
+    case 'custom':
       // Parse page ranges like "1-3,5,7-10"
       if (!options.pages) {
-        throw new Error('pages option is required for range mode');
+        throw new Error('pages option is required for range/custom mode');
       }
 
       const pageRanges = options.pages.split(',').map(s => s.trim());

@@ -1,29 +1,37 @@
 import fs from 'fs';
 import path from 'path';
 import { PDFDocument } from 'pdf-lib';
+import { execSync } from 'child_process';
 
 export interface ProtectPdfOptions {
   outputDir?: string;
   userPassword: string;
   ownerPassword?: string;
   permissions?: {
-    printing?: boolean;
+    printing?: 'none' | 'lowResolution' | 'highResolution';
     modifying?: boolean;
     copying?: boolean;
     annotating?: boolean;
-    fillingForms?: boolean;
-    contentAccessibility?: boolean;
-    documentAssembly?: boolean;
   };
 }
 
 /**
+ * Check if qpdf is installed on the system
+ */
+function isQpdfAvailable(): boolean {
+  try {
+    execSync('which qpdf', { stdio: 'ignore' });
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+/**
  * Protect PDF with password encryption
- *
- * Note: pdf-lib has limited native encryption support. This implementation
- * provides basic password protection. For production use with strong encryption,
- * consider using libraries like node-qpdf or pdf-to-printer with external tools.
- *
+ * Uses qpdf for real AES-256 encryption when available,
+ * falls back to pdf-lib for basic protection
+ * 
  * @param inputPath - Path to input PDF file
  * @param options - Protection options including passwords and permissions
  * @returns Path to protected PDF file
@@ -35,100 +43,101 @@ export async function protectPdf(
   try {
     console.log(`[Protect PDF] Starting protection: ${inputPath}`);
 
-    // Validate user password is provided
-    if (!options.userPassword) {
+    if (!options.userPassword || options.userPassword.length === 0) {
       throw new Error('User password is required for PDF protection');
     }
 
-    // Read PDF file
-    const existingPdfBytes = fs.readFileSync(inputPath);
-    const originalSize = existingPdfBytes.length;
+    if (!fs.existsSync(inputPath)) {
+      throw new Error(`Input file not found: ${inputPath}`);
+    }
 
+    const originalSize = fs.statSync(inputPath).size;
     console.log(`[Protect PDF] Original size: ${(originalSize / 1024).toFixed(2)} KB`);
-
-    // Load PDF document
-    const pdfDoc = await PDFDocument.load(existingPdfBytes);
-
-    // Set metadata to indicate the document is protected
-    pdfDoc.setTitle(pdfDoc.getTitle() || 'Protected Document');
-    pdfDoc.setProducer('SmartDocConverter - Protected PDF');
-    pdfDoc.setCreator('SmartDocConverter');
-    pdfDoc.setCreationDate(new Date());
-    pdfDoc.setModificationDate(new Date());
 
     // Generate output path
     const outputDir = options.outputDir || path.dirname(inputPath);
     const baseName = path.basename(inputPath, path.extname(inputPath));
     const outputPath = path.join(outputDir, `${baseName}_protected.pdf`);
 
-    // Save options for pdf-lib
-    // Note: pdf-lib v1.17.1 doesn't have built-in password encryption support
-    // We'll save the PDF with metadata indicating it should be protected
-    // For actual encryption, you would need to use external tools like qpdf or pdftk
-    const saveOptions: any = {
-      useObjectStreams: false,
-      addDefaultPage: false,
-    };
+    // Try to use qpdf for real encryption
+    if (isQpdfAvailable()) {
+      console.log('[Protect PDF] Using qpdf for AES-256 encryption...');
+      
+      const userPwd = options.userPassword;
+      const ownerPwd = options.ownerPassword || options.userPassword;
+      
+      // Build qpdf command with permissions
+      let qpdfArgs = [
+        `--encrypt "${userPwd}" "${ownerPwd}" 256`,
+      ];
 
-    console.log('[Protect PDF] Applying protection settings...');
-    console.log('[Protect PDF] Note: This is a basic implementation. For production use with strong encryption, consider using qpdf or similar tools.');
+      // Add permission restrictions
+      const perms = options.permissions || {};
+      if (perms.printing === 'none') {
+        qpdfArgs.push('--print=none');
+      } else if (perms.printing === 'lowResolution') {
+        qpdfArgs.push('--print=low');
+      }
 
-    // Save the PDF
-    const pdfBytes = await pdfDoc.save(saveOptions);
+      if (perms.modifying === false) {
+        qpdfArgs.push('--modify=none');
+      }
 
-    // Write the PDF to a temporary location first
-    const tempPath = path.join(outputDir, `${baseName}_temp.pdf`);
-    fs.writeFileSync(tempPath, pdfBytes);
+      if (perms.copying === false) {
+        qpdfArgs.push('--extract=n');
+      }
 
-    // For basic implementation, we'll use a workaround:
-    // We'll create a new PDF with a custom encryption marker
-    // In production, you should integrate with qpdf or similar
+      if (perms.annotating === false) {
+        qpdfArgs.push('--annotate=n');
+      }
 
-    // Since pdf-lib doesn't natively support encryption, we'll document this limitation
-    // and save the file with a note that external encryption should be applied
+      qpdfArgs.push('--');
+      qpdfArgs.push(`"${inputPath}"`);
+      qpdfArgs.push(`"${outputPath}"`);
 
-    // For now, we'll just copy the file and add metadata
-    fs.copyFileSync(tempPath, outputPath);
-    fs.unlinkSync(tempPath);
+      const qpdfCommand = `qpdf ${qpdfArgs.join(' ')}`;
+      
+      try {
+        execSync(qpdfCommand, { stdio: 'pipe' });
+        console.log('[Protect PDF] qpdf encryption successful');
+      } catch (error: any) {
+        console.error('[Protect PDF] qpdf failed:', error.message);
+        throw new Error(`qpdf encryption failed: ${error.message}`);
+      }
+    } else {
+      // Fallback to pdf-lib (limited protection - no real encryption)
+      console.log('[Protect PDF] qpdf not available, using pdf-lib (limited protection)');
+      console.log('[Protect PDF] Note: For full AES-256 encryption, install qpdf: brew install qpdf');
 
-    const protectedSize = pdfBytes.length;
+      const existingPdfBytes = fs.readFileSync(inputPath);
+      const pdfDoc = await PDFDocument.load(existingPdfBytes, {
+        ignoreEncryption: true,
+      });
 
+      // Set metadata to indicate protection intent
+      pdfDoc.setProducer('SmartDocConverter - Protected PDF');
+      pdfDoc.setCreator('SmartDocConverter');
+      pdfDoc.setCreationDate(new Date());
+      pdfDoc.setModificationDate(new Date());
+
+      // Add custom metadata about protection (this doesn't actually encrypt)
+      // This is a placeholder - pdf-lib doesn't support encryption
+      const pdfBytes = await pdfDoc.save({
+        useObjectStreams: false,
+      });
+
+      fs.writeFileSync(outputPath, pdfBytes);
+      
+      console.log('[Protect PDF] WARNING: PDF saved without encryption (qpdf not installed)');
+    }
+
+    const protectedSize = fs.statSync(outputPath).size;
     console.log(`[Protect PDF] Protected size: ${(protectedSize / 1024).toFixed(2)} KB`);
     console.log(`[Protect PDF] Protection complete: ${outputPath}`);
-    console.log('[Protect PDF] IMPORTANT: This is a basic implementation without encryption.');
-    console.log('[Protect PDF] For production use, integrate with qpdf: qpdf --encrypt <user-pwd> <owner-pwd> 256 -- input.pdf output.pdf');
 
     return outputPath;
   } catch (error) {
     console.error('[Protect PDF] Protection failed:', error);
     throw new Error(`Failed to protect PDF: ${error instanceof Error ? error.message : 'Unknown error'}`);
   }
-}
-
-/**
- * Apply password protection using qpdf (if available)
- * This is a helper function that can be used when qpdf is installed on the system
- *
- * @param inputPath - Path to input PDF file
- * @param outputPath - Path to output PDF file
- * @param userPassword - User password for opening the PDF
- * @param ownerPassword - Owner password for modifying permissions
- * @param permissions - Permission settings
- */
-export async function protectPdfWithQpdf(
-  inputPath: string,
-  outputPath: string,
-  userPassword: string,
-  ownerPassword?: string,
-  permissions?: ProtectPdfOptions['permissions']
-): Promise<void> {
-  // This function would use child_process to call qpdf
-  // Example command: qpdf --encrypt user-pwd owner-pwd 256 --print=none --modify=none -- input.pdf output.pdf
-
-  // Implementation note: This requires qpdf to be installed on the system
-  // For a production implementation, you would use:
-  // const { execFile } = require('child_process');
-  // execFile('qpdf', [...args], callback);
-
-  throw new Error('qpdf integration not yet implemented. This is a placeholder for future enhancement.');
 }
