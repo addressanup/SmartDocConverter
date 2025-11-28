@@ -1,8 +1,7 @@
 import fs from 'fs';
 import path from 'path';
 import * as XLSX from 'xlsx';
-
-const pdfParse = require('pdf-parse');
+import { parsePdf } from '../pdf-parse';
 
 export interface PdfToExcelOptions {
   outputDir?: string;
@@ -41,7 +40,7 @@ export async function convertPdfToExcel(
     const dataBuffer = fs.readFileSync(inputPath);
 
     console.log('[PDF to Excel] Parsing PDF...');
-    const pdfData = await pdfParse(dataBuffer);
+    const pdfData = await parsePdf(dataBuffer);
 
     console.log(`[PDF to Excel] Extracted ${pdfData.numpages} pages, ${pdfData.text.length} characters`);
 

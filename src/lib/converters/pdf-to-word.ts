@@ -1,8 +1,7 @@
 import fs from 'fs';
 import path from 'path';
 import { Document, Packer, Paragraph, TextRun, HeadingLevel, AlignmentType, BorderStyle } from 'docx';
-
-const pdfParse = require('pdf-parse');
+import { parsePdf } from '../pdf-parse';
 
 export interface PdfToWordOptions {
   outputDir?: string;
@@ -38,7 +37,7 @@ export async function convertPdfToWord(
     const dataBuffer = fs.readFileSync(inputPath);
 
     console.log('[PDF to Word] Parsing PDF...');
-    const pdfData = await pdfParse(dataBuffer);
+    const pdfData = await parsePdf(dataBuffer);
 
     console.log(`[PDF to Word] Extracted ${pdfData.numpages} pages, ${pdfData.text.length} characters`);
 

@@ -56,8 +56,8 @@ export async function convertPdfToJpg(
     // Extract text content for rendering
     let extractedText = '';
     try {
-      const pdfParseModule = await import('pdf-parse') as any;
-      const result = await pdfParseModule.default(existingPdfBytes);
+      const { parsePdf } = await import('../pdf-parse');
+      const result = await parsePdf(Buffer.from(existingPdfBytes));
       extractedText = result?.text || '';
       console.log(`[PDF to JPG] Extracted ${extractedText.length} characters`);
     } catch (error) {
