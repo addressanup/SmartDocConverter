@@ -105,9 +105,44 @@ async function getOrCreateUsageRecord(
     }
 
     return usage
+  } else if (ipAddress) {
+    // Fallback to IP address if no userId or fingerprint
+    const ipFingerprint = `ip_${ipAddress}`
+    let usage = await prisma.usageTracking.findUnique({
+      where: {
+        fingerprint_date: {
+          fingerprint: ipFingerprint,
+          date: today,
+        },
+      },
+    })
+
+    if (!usage) {
+      usage = await prisma.usageTracking.create({
+        data: {
+          fingerprint: ipFingerprint,
+          date: today,
+          conversionsUsed: 0,
+          bytesProcessed: BigInt(0),
+          ipAddress,
+        },
+      })
+    }
+
+    return usage
   }
 
-  throw new Error('Either userId or fingerprint must be provided')
+  // Last resort: create anonymous usage with random ID
+  const anonymousId = `anon_${Date.now()}_${Math.random().toString(36).substring(7)}`
+  return await prisma.usageTracking.create({
+    data: {
+      fingerprint: anonymousId,
+      date: today,
+      conversionsUsed: 0,
+      bytesProcessed: BigInt(0),
+      ipAddress,
+    },
+  })
 }
 
 /**

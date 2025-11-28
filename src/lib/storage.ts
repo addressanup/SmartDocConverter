@@ -2,8 +2,10 @@ import { randomUUID } from 'crypto'
 import { promises as fs } from 'fs'
 import path from 'path'
 
-const UPLOAD_DIR = process.env.UPLOAD_DIR || './uploads'
-const TEMP_DIR = process.env.TEMP_DIR || './tmp'
+// Use /tmp on Vercel (serverless) - it's the only writable directory
+const isVercel = process.env.VERCEL === '1'
+const UPLOAD_DIR = process.env.UPLOAD_DIR || (isVercel ? '/tmp/uploads' : './uploads')
+const TEMP_DIR = process.env.TEMP_DIR || (isVercel ? '/tmp' : './tmp')
 
 export interface StorageResult {
   path: string
