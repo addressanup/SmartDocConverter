@@ -1,21 +1,8 @@
 'use client'
 
-import { useState, useCallback, useRef } from 'react'
+import { useState, useCallback } from 'react'
 
 export type JobStatus = 'idle' | 'uploading' | 'processing' | 'completed' | 'failed'
-
-export interface ConversionJob {
-  jobId: string
-  status: JobStatus
-  progress: number
-  downloadUrl?: string
-  error?: string
-}
-
-export interface UseConversionJobOptions {
-  pollInterval?: number // ms
-  maxPollTime?: number // ms
-}
 
 export interface UseConversionJobReturn {
   status: JobStatus
@@ -29,74 +16,12 @@ export interface UseConversionJobReturn {
   download: () => void
 }
 
-export function useConversionJob(opts: UseConversionJobOptions = {}): UseConversionJobReturn {
-  const { pollInterval = 1000, maxPollTime = 120000 } = opts
-
+export function useConversionJob(): UseConversionJobReturn {
   const [status, setStatus] = useState<JobStatus>('idle')
   const [progress, setProgress] = useState(0)
   const [downloadUrl, setDownloadUrl] = useState<string | null>(null)
   const [error, setError] = useState<string | null>(null)
   const [metadata, setMetadata] = useState<Record<string, any> | null>(null)
-
-  const pollTimeoutRef = useRef<NodeJS.Timeout | null>(null)
-  const startTimeRef = useRef<number>(0)
-
-  const clearPolling = useCallback(() => {
-    if (pollTimeoutRef.current) {
-      clearTimeout(pollTimeoutRef.current)
-      pollTimeoutRef.current = null
-    }
-  }, [])
-
-  const pollJobStatus = useCallback(async (jobId: string) => {
-    try {
-      const response = await fetch(`/api/convert?jobId=${jobId}`)
-
-      if (!response.ok) {
-        throw new Error('Failed to check job status')
-      }
-
-      const job: ConversionJob & { metadata?: Record<string, any> } = await response.json()
-
-      if (job.status === 'completed') {
-        setStatus('completed')
-        setProgress(100)
-        setDownloadUrl(job.downloadUrl || null)
-        setMetadata(job.metadata || null)
-        clearPolling()
-        return
-      }
-      
-      // ... rest of the function ...
-
-      if (job.status === 'failed') {
-        setStatus('failed')
-        setError(job.error || 'Conversion failed')
-        clearPolling()
-        return
-      }
-
-      // Update progress based on job status
-      if (job.status === 'processing') {
-        setProgress(prev => Math.min(prev + 5, 90))
-      }
-
-      // Check if we've exceeded max poll time
-      if (Date.now() - startTimeRef.current > maxPollTime) {
-        setStatus('failed')
-        setError('Conversion timed out. Please try again.')
-        clearPolling()
-        return
-      }
-
-      // Continue polling
-      pollTimeoutRef.current = setTimeout(() => pollJobStatus(jobId), pollInterval)
-    } catch (err) {
-      setStatus('failed')
-      setError(err instanceof Error ? err.message : 'Failed to check conversion status')
-      clearPolling()
-    }
-  }, [pollInterval, maxPollTime, clearPolling])
 
   const startConversion = useCallback(async (
     file: File,
@@ -104,60 +29,56 @@ export function useConversionJob(opts: UseConversionJobOptions = {}): UseConvers
     options: Record<string, unknown> = {}
   ) => {
     try {
-      clearPolling()
       setStatus('uploading')
-      setProgress(10)
+      setProgress(20)
       setError(null)
       setDownloadUrl(null)
       setMetadata(null)
-      startTimeRef.current = Date.now()
 
-      // Upload file
+      // Create form data with file, type, and options
       const formData = new FormData()
       formData.append('file', file)
+      formData.append('type', conversionType)
+      formData.append('options', JSON.stringify(options))
 
-      const uploadResponse = await fetch('/api/upload', {
+      setStatus('processing')
+      setProgress(50)
+
+      // Send to synchronous conversion endpoint
+      const response = await fetch('/api/convert-sync', {
         method: 'POST',
         body: formData,
       })
 
-      if (!uploadResponse.ok) {
-        const uploadError = await uploadResponse.json()
-        throw new Error(uploadError.error || 'Upload failed')
+      if (!response.ok) {
+        // Try to parse error JSON
+        const contentType = response.headers.get('content-type')
+        if (contentType?.includes('application/json')) {
+          const errorData = await response.json()
+          throw new Error(errorData.error || errorData.details || 'Conversion failed')
+        }
+        throw new Error(`Conversion failed with status ${response.status}`)
       }
 
-      const uploadResult = await uploadResponse.json()
-      setProgress(30)
-      setStatus('processing')
+      setProgress(90)
 
-      // Start conversion job
-      const convertResponse = await fetch('/api/convert', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          fileId: uploadResult.fileId,
-          filePath: uploadResult.filePath,
-          conversionType,
-          fileSize: file.size,
-          options,
-        }),
-      })
-
-      if (!convertResponse.ok) {
-        const convertError = await convertResponse.json()
-        throw new Error(convertError.error || 'Conversion failed')
-      }
-
-      const convertResult = await convertResponse.json()
-      setProgress(50)
-
-      // Start polling for job status
-      pollJobStatus(convertResult.jobId)
+      // Get the file blob
+      const blob = await response.blob()
+      const filename = response.headers.get('X-Output-Filename') || 'converted-file'
+      
+      // Create download URL
+      const url = URL.createObjectURL(blob)
+      setDownloadUrl(url)
+      setMetadata({ filename, size: blob.size })
+      
+      setProgress(100)
+      setStatus('completed')
     } catch (err) {
+      console.error('Conversion error:', err)
       setStatus('failed')
       setError(err instanceof Error ? err.message : 'An unexpected error occurred')
     }
-  }, [clearPolling, pollJobStatus])
+  }, [])
 
   const startMultiFileConversion = useCallback(async (
     files: File[],
@@ -165,87 +86,77 @@ export function useConversionJob(opts: UseConversionJobOptions = {}): UseConvers
     options: Record<string, unknown> = {}
   ) => {
     try {
-      clearPolling()
       setStatus('uploading')
-      setProgress(5)
+      setProgress(10)
       setError(null)
       setDownloadUrl(null)
       setMetadata(null)
-      startTimeRef.current = Date.now()
 
-      // Upload all files
-      const filePaths: string[] = []
-      let fileId = ''
-
-      for (let i = 0; i < files.length; i++) {
-        const file = files[i]
-        const formData = new FormData()
-        formData.append('file', file)
-
-        const uploadResponse = await fetch('/api/upload', {
-          method: 'POST',
-          body: formData,
-        })
-
-        if (!uploadResponse.ok) {
-          const uploadError = await uploadResponse.json()
-          throw new Error(uploadError.error || `Upload failed for file ${i + 1}`)
-        }
-
-        const uploadResult = await uploadResponse.json()
-        filePaths.push(uploadResult.filePath)
-        if (i === 0) fileId = uploadResult.fileId
-
-        // Update progress for each file upload
-        setProgress(5 + Math.floor((i + 1) / files.length * 25))
-      }
+      // For merge, we need to upload all files first then merge
+      const formData = new FormData()
+      files.forEach((file, index) => {
+        formData.append(`file${index}`, file)
+      })
+      formData.append('type', conversionType)
+      formData.append('options', JSON.stringify(options))
+      formData.append('fileCount', files.length.toString())
 
       setStatus('processing')
-      setProgress(35)
-
-      // Start conversion job with all file paths
-      const convertResponse = await fetch('/api/convert', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          fileId,
-          filePath: filePaths[0],
-          filePaths,
-          conversionType,
-          options,
-        }),
-      })
-
-      if (!convertResponse.ok) {
-        const convertError = await convertResponse.json()
-        throw new Error(convertError.error || 'Conversion failed')
-      }
-
-      const convertResult = await convertResponse.json()
       setProgress(50)
 
-      // Start polling for job status
-      pollJobStatus(convertResult.jobId)
+      const response = await fetch('/api/convert-multi-sync', {
+        method: 'POST',
+        body: formData,
+      })
+
+      if (!response.ok) {
+        const contentType = response.headers.get('content-type')
+        if (contentType?.includes('application/json')) {
+          const errorData = await response.json()
+          throw new Error(errorData.error || errorData.details || 'Conversion failed')
+        }
+        throw new Error(`Conversion failed with status ${response.status}`)
+      }
+
+      setProgress(90)
+
+      const blob = await response.blob()
+      const filename = response.headers.get('X-Output-Filename') || 'merged.pdf'
+      
+      const url = URL.createObjectURL(blob)
+      setDownloadUrl(url)
+      setMetadata({ filename, size: blob.size })
+      
+      setProgress(100)
+      setStatus('completed')
     } catch (err) {
+      console.error('Multi-file conversion error:', err)
       setStatus('failed')
       setError(err instanceof Error ? err.message : 'An unexpected error occurred')
     }
-  }, [clearPolling, pollJobStatus])
+  }, [])
 
   const reset = useCallback(() => {
-    clearPolling()
+    if (downloadUrl) {
+      URL.revokeObjectURL(downloadUrl)
+    }
     setStatus('idle')
     setProgress(0)
     setDownloadUrl(null)
     setError(null)
     setMetadata(null)
-  }, [clearPolling])
+  }, [downloadUrl])
 
   const download = useCallback(() => {
-    if (downloadUrl) {
-      window.open(downloadUrl, '_blank')
+    if (downloadUrl && metadata?.filename) {
+      const a = document.createElement('a')
+      a.href = downloadUrl
+      a.download = metadata.filename
+      document.body.appendChild(a)
+      a.click()
+      document.body.removeChild(a)
     }
-  }, [downloadUrl])
+  }, [downloadUrl, metadata])
 
   return {
     status,
