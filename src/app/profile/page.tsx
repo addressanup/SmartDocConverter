@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react'
 import { useSession } from 'next-auth/react'
 import { useRouter } from 'next/navigation'
-import { User, Mail, Calendar, CreditCard, Shield, Check, X, Loader2 } from 'lucide-react'
+import { User, Mail, Calendar, CreditCard, Shield, Check, X, Loader2, Crown, Sparkles, Settings } from 'lucide-react'
 import { Button } from '@/components/ui/Button'
 import Link from 'next/link'
 import { z } from 'zod'
@@ -30,21 +30,18 @@ export default function ProfilePage() {
   const [subscription, setSubscription] = useState<UserSubscription | null>(null)
   const [loadingSubscription, setLoadingSubscription] = useState(true)
 
-  // Redirect to login if not authenticated
   useEffect(() => {
     if (status === 'unauthenticated') {
       router.push('/login')
     }
   }, [status, router])
 
-  // Initialize name from session
   useEffect(() => {
     if (session?.user?.name) {
       setName(session.user.name)
     }
   }, [session?.user?.name])
 
-  // Fetch subscription data
   useEffect(() => {
     const fetchSubscription = async () => {
       if (status === 'authenticated') {
@@ -61,7 +58,6 @@ export default function ProfilePage() {
         }
       }
     }
-
     fetchSubscription()
   }, [status])
 
@@ -69,7 +65,6 @@ export default function ProfilePage() {
     setError(null)
     setSuccess(false)
 
-    // Validate name
     try {
       updateNameSchema.parse({ name })
     } catch (err) {
@@ -84,9 +79,7 @@ export default function ProfilePage() {
     try {
       const response = await fetch('/api/user/update', {
         method: 'PATCH',
-        headers: {
-          'Content-Type': 'application/json',
-        },
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ name }),
       })
 
@@ -95,13 +88,9 @@ export default function ProfilePage() {
         throw new Error(data.error || 'Failed to update profile')
       }
 
-      // Update the session with new name
       await update({ name })
-
       setSuccess(true)
       setIsEditing(false)
-
-      // Clear success message after 3 seconds
       setTimeout(() => setSuccess(false), 3000)
     } catch (err) {
       setError(err instanceof Error ? err.message : 'An unexpected error occurred')
@@ -125,314 +114,273 @@ export default function ProfilePage() {
     })
   }
 
-  const getSubscriptionStatus = () => {
-    if (loadingSubscription) {
-      return (
-        <div className="flex items-center gap-2">
-          <Loader2 className="h-4 w-4 animate-spin text-gray-400" />
-          <span className="text-gray-600">Loading...</span>
-        </div>
-      )
-    }
-
-    if (!subscription || subscription.status === 'INCOMPLETE') {
-      return (
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-2">
-            <div className="w-2 h-2 rounded-full bg-gray-400"></div>
-            <span className="text-gray-600 font-medium">Free Plan</span>
-          </div>
-          <Link href="/pricing">
-            <Button size="sm" variant="outline">
-              Upgrade to Premium
-            </Button>
-          </Link>
-        </div>
-      )
-    }
-
-    const statusColors = {
-      ACTIVE: 'bg-green-500',
-      TRIALING: 'bg-blue-500',
-      CANCELED: 'bg-orange-500',
-      PAST_DUE: 'bg-red-500',
-    }
-
-    const statusText = {
-      ACTIVE: 'Active',
-      TRIALING: 'Trial',
-      CANCELED: 'Canceled',
-      PAST_DUE: 'Past Due',
-    }
-
-    const color = statusColors[subscription.status as keyof typeof statusColors] || 'bg-gray-400'
-    const text = statusText[subscription.status as keyof typeof statusText] || subscription.status
-
-    return (
-      <div className="space-y-2">
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-2">
-            <div className={`w-2 h-2 rounded-full ${color}`}></div>
-            <span className="text-gray-600 font-medium">
-              {subscription.plan === 'MONTHLY' ? 'Premium Monthly' : 'Premium Annual'} - {text}
-            </span>
-          </div>
-          {subscription.status === 'ACTIVE' && !subscription.cancelAtPeriodEnd && (
-            <Link href="/api/stripe/portal" target="_blank">
-              <Button size="sm" variant="ghost">
-                Manage Subscription
-              </Button>
-            </Link>
-          )}
-        </div>
-        {subscription.currentPeriodEnd && (
-          <p className="text-sm text-gray-500">
-            {subscription.cancelAtPeriodEnd ? 'Ends' : 'Renews'} on {formatDate(subscription.currentPeriodEnd)}
-          </p>
-        )}
-      </div>
-    )
-  }
-
-  // Loading state
   if (status === 'loading') {
     return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
-        <div className="text-center">
-          <Loader2 className="h-12 w-12 animate-spin text-primary-600 mx-auto mb-4" />
-          <p className="text-gray-600">Loading your profile...</p>
+      <div className="min-h-screen relative overflow-hidden flex items-center justify-center">
+        <div className="absolute inset-0 bg-gradient-to-br from-slate-50 via-white to-indigo-50/30" />
+        <div className="relative z-10 text-center">
+          <div className="w-16 h-16 rounded-full bg-gradient-to-br from-indigo-500 via-purple-500 to-pink-500 flex items-center justify-center mx-auto animate-pulse">
+            <Sparkles className="h-8 w-8 text-white" />
+          </div>
+          <p className="mt-6 text-lg font-medium text-slate-600">Loading your profile...</p>
         </div>
       </div>
     )
   }
 
-  // Not authenticated (will redirect)
-  if (status === 'unauthenticated') {
-    return null
-  }
+  if (status === 'unauthenticated') return null
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      {/* Hero Section */}
-      <section className="bg-gradient-to-br from-primary-50 to-white py-16">
-        <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="text-center">
-            <div className="w-16 h-16 bg-primary-100 rounded-2xl flex items-center justify-center mx-auto mb-6">
-              <User className="h-8 w-8 text-primary-600" />
-            </div>
-            <h1 className="text-3xl md:text-4xl font-bold text-gray-900 mb-4">
-              Your Profile
-            </h1>
-            <p className="text-lg text-gray-600 max-w-2xl mx-auto">
-              Manage your account settings and subscription
-            </p>
-          </div>
-        </div>
-      </section>
+    <div className="min-h-screen relative overflow-hidden">
+      {/* Background */}
+      <div className="fixed inset-0 z-0 pointer-events-none">
+        <div className="absolute inset-0 bg-gradient-to-br from-slate-50 via-white to-purple-50/30" />
+        <div className="absolute top-0 left-1/4 w-[600px] h-[600px] bg-purple-100/40 rounded-full blur-[120px]" />
+        <div className="absolute bottom-0 right-1/4 w-[500px] h-[500px] bg-indigo-100/30 rounded-full blur-[100px]" />
+        <div className="absolute inset-0 bg-[url('/grid.svg')] opacity-30" />
+      </div>
 
-      {/* Profile Content */}
-      <section className="py-12">
-        <div className="max-w-3xl mx-auto px-4 sm:px-6 lg:px-8">
+      <div className="relative z-10 pt-32 pb-24">
+        <div className="max-w-3xl mx-auto px-6">
+          {/* Header */}
+          <div className="text-center mb-12">
+            <div className="relative inline-block mb-6">
+              <div className="absolute inset-0 bg-gradient-to-br from-indigo-500 to-purple-600 rounded-3xl blur-xl opacity-40" />
+              <div className="relative w-20 h-20 bg-gradient-to-br from-indigo-500 via-purple-500 to-pink-500 rounded-3xl flex items-center justify-center shadow-2xl">
+                <User className="h-10 w-10 text-white" />
+              </div>
+            </div>
+            <h1 className="text-4xl font-extrabold text-slate-900 mb-3">Your Profile</h1>
+            <p className="text-lg text-slate-500">Manage your account settings and subscription details.</p>
+          </div>
+
           {/* Success Message */}
           {success && (
-            <div className="mb-6 rounded-lg bg-green-50 p-4 flex items-center gap-3">
-              <Check className="h-5 w-5 text-green-600 flex-shrink-0" />
-              <p className="text-sm text-green-800 font-medium">
-                Profile updated successfully!
-              </p>
+            <div className="mb-8 rounded-2xl bg-gradient-to-r from-emerald-50 to-teal-50 border border-emerald-200 p-5 flex items-center gap-4 animate-slide-down">
+              <div className="w-10 h-10 rounded-xl bg-emerald-100 flex items-center justify-center">
+                <Check className="h-5 w-5 text-emerald-600" />
+              </div>
+              <p className="font-semibold text-emerald-700">Profile updated successfully!</p>
             </div>
           )}
 
-          <div className="space-y-6">
-            {/* Profile Information Card */}
-            <div className="bg-white rounded-2xl shadow-lg p-8">
-              <div className="flex items-center gap-6 mb-8">
-                {session?.user?.image ? (
-                  <img
-                    src={session.user.image}
-                    alt={session.user.name || 'User avatar'}
-                    className="w-20 h-20 rounded-full object-cover ring-4 ring-primary-100"
-                  />
-                ) : (
-                  <div className="w-20 h-20 rounded-full bg-gradient-to-br from-primary-500 to-primary-600 flex items-center justify-center ring-4 ring-primary-100">
-                    <span className="text-2xl font-bold text-white">
-                      {session?.user?.name?.charAt(0).toUpperCase() || session?.user?.email?.charAt(0).toUpperCase() || 'U'}
-                    </span>
-                  </div>
-                )}
-                <div className="flex-1">
-                  <h2 className="text-2xl font-bold text-gray-900">
-                    {session?.user?.name || 'User'}
-                  </h2>
-                  <p className="text-gray-600">{session?.user?.email}</p>
-                </div>
-              </div>
-
-              {/* Name Edit Form */}
-              <div className="space-y-4">
-                <div>
-                  <label
-                    htmlFor="name"
-                    className="block text-sm font-medium text-gray-700 mb-2"
-                  >
-                    Display Name
-                  </label>
-                  {isEditing ? (
-                    <div className="space-y-3">
-                      <input
-                        id="name"
-                        type="text"
-                        value={name}
-                        onChange={(e) => setName(e.target.value)}
-                        disabled={isSaving}
-                        className="block w-full rounded-lg border border-gray-300 px-4 py-2.5 shadow-sm focus:border-primary-500 focus:outline-none focus:ring-2 focus:ring-primary-500 disabled:cursor-not-allowed disabled:bg-gray-50"
-                        placeholder="Enter your name"
-                      />
-                      {error && (
-                        <div className="flex items-center gap-2 text-sm text-red-600">
-                          <X className="h-4 w-4" />
-                          <span>{error}</span>
-                        </div>
-                      )}
-                      <div className="flex gap-3">
-                        <Button
-                          onClick={handleSave}
-                          isLoading={isSaving}
-                          disabled={isSaving}
-                          size="sm"
-                        >
-                          Save Changes
-                        </Button>
-                        <Button
-                          onClick={handleCancel}
-                          variant="ghost"
-                          disabled={isSaving}
-                          size="sm"
-                        >
-                          Cancel
-                        </Button>
-                      </div>
-                    </div>
+          <div className="space-y-8">
+            {/* Profile Card */}
+            <div className="relative">
+              <div className="absolute -inset-1 bg-gradient-to-r from-indigo-500/10 via-purple-500/10 to-pink-500/10 rounded-[28px] blur-xl" />
+              <div className="relative bg-white/80 backdrop-blur-xl rounded-3xl border border-white/60 shadow-xl p-8">
+                <div className="flex items-center gap-6 mb-8">
+                  {session?.user?.image ? (
+                    <img
+                      src={session.user.image}
+                      alt={session.user.name || 'User avatar'}
+                      className="w-20 h-20 rounded-2xl object-cover ring-4 ring-indigo-100"
+                    />
                   ) : (
-                    <div className="flex items-center justify-between p-4 rounded-lg bg-gray-50 border border-gray-200">
-                      <div className="flex items-center gap-3">
-                        <User className="h-5 w-5 text-gray-400" />
-                        <span className="text-gray-900 font-medium">
-                          {session?.user?.name || 'Not set'}
-                        </span>
-                      </div>
-                      <Button
-                        onClick={() => setIsEditing(true)}
-                        variant="outline"
-                        size="sm"
-                      >
-                        Edit
-                      </Button>
+                    <div className="w-20 h-20 rounded-2xl bg-gradient-to-br from-indigo-500 via-purple-500 to-pink-500 flex items-center justify-center ring-4 ring-indigo-100 shadow-lg">
+                      <span className="text-3xl font-bold text-white">
+                        {session?.user?.name?.charAt(0).toUpperCase() || session?.user?.email?.charAt(0).toUpperCase() || 'U'}
+                      </span>
                     </div>
                   )}
-                </div>
-
-                {/* Email (Read-only) */}
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Email Address
-                  </label>
-                  <div className="flex items-center gap-3 p-4 rounded-lg bg-gray-50 border border-gray-200">
-                    <Mail className="h-5 w-5 text-gray-400" />
-                    <span className="text-gray-900 font-medium">
-                      {session?.user?.email}
-                    </span>
+                  <div className="flex-1">
+                    <h2 className="text-2xl font-bold text-slate-900 mb-1">
+                      {session?.user?.name || 'User'}
+                    </h2>
+                    <p className="text-slate-500">{session?.user?.email}</p>
                   </div>
-                  <p className="mt-2 text-sm text-gray-500">
-                    Email address cannot be changed
-                  </p>
                 </div>
 
-                {/* Account Created */}
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Member Since
-                  </label>
-                  <div className="flex items-center gap-3 p-4 rounded-lg bg-gray-50 border border-gray-200">
-                    <Calendar className="h-5 w-5 text-gray-400" />
-                    <span className="text-gray-900 font-medium">
-                      {formatDate((session?.user as any)?.createdAt)}
-                    </span>
+                {/* Form Fields */}
+                <div className="space-y-6">
+                  <div>
+                    <label className="block text-sm font-bold text-slate-700 uppercase tracking-wider mb-3">
+                      Display Name
+                    </label>
+                    {isEditing ? (
+                      <div className="space-y-4">
+                        <input
+                          type="text"
+                          value={name}
+                          onChange={(e) => setName(e.target.value)}
+                          disabled={isSaving}
+                          className="block w-full rounded-xl border-2 border-slate-200 bg-white px-4 py-3 text-slate-900 focus:border-indigo-400 focus:outline-none focus:ring-4 focus:ring-indigo-100 disabled:opacity-50 transition-all"
+                          placeholder="Enter your name"
+                        />
+                        {error && (
+                          <div className="flex items-center gap-2 text-sm text-red-600">
+                            <X className="h-4 w-4" />
+                            <span>{error}</span>
+                          </div>
+                        )}
+                        <div className="flex gap-3">
+                          <Button onClick={handleSave} isLoading={isSaving} size="md" variant="gradient">
+                            Save Changes
+                          </Button>
+                          <Button onClick={handleCancel} variant="ghost" disabled={isSaving} size="md">
+                            Cancel
+                          </Button>
+                        </div>
+                      </div>
+                    ) : (
+                      <div className="flex items-center justify-between p-4 rounded-2xl bg-slate-50 border-2 border-slate-100">
+                        <div className="flex items-center gap-3">
+                          <div className="w-10 h-10 rounded-xl bg-white border border-slate-200 flex items-center justify-center">
+                            <User className="h-5 w-5 text-slate-500" />
+                          </div>
+                          <span className="font-medium text-slate-900">
+                            {session?.user?.name || 'Not set'}
+                          </span>
+                        </div>
+                        <Button onClick={() => setIsEditing(true)} variant="outline" size="sm" className="border-2">
+                          Edit
+                        </Button>
+                      </div>
+                    )}
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-bold text-slate-700 uppercase tracking-wider mb-3">
+                      Email Address
+                    </label>
+                    <div className="flex items-center gap-3 p-4 rounded-2xl bg-slate-50 border-2 border-slate-100">
+                      <div className="w-10 h-10 rounded-xl bg-white border border-slate-200 flex items-center justify-center">
+                        <Mail className="h-5 w-5 text-slate-500" />
+                      </div>
+                      <span className="font-medium text-slate-900">{session?.user?.email}</span>
+                    </div>
+                    <p className="mt-2 text-xs text-slate-500">Email address cannot be changed</p>
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-bold text-slate-700 uppercase tracking-wider mb-3">
+                      Member Since
+                    </label>
+                    <div className="flex items-center gap-3 p-4 rounded-2xl bg-slate-50 border-2 border-slate-100">
+                      <div className="w-10 h-10 rounded-xl bg-white border border-slate-200 flex items-center justify-center">
+                        <Calendar className="h-5 w-5 text-slate-500" />
+                      </div>
+                      <span className="font-medium text-slate-900">
+                        {formatDate((session?.user as any)?.createdAt)}
+                      </span>
+                    </div>
                   </div>
                 </div>
               </div>
             </div>
 
             {/* Subscription Card */}
-            <div className="bg-white rounded-2xl shadow-lg p-8">
-              <div className="flex items-center gap-3 mb-6">
-                <div className="w-10 h-10 bg-primary-100 rounded-lg flex items-center justify-center">
-                  <CreditCard className="h-5 w-5 text-primary-600" />
+            <div className="relative">
+              <div className="absolute -inset-1 bg-gradient-to-r from-amber-500/10 via-orange-500/10 to-rose-500/10 rounded-[28px] blur-xl" />
+              <div className="relative bg-white/80 backdrop-blur-xl rounded-3xl border border-white/60 shadow-xl p-8">
+                <div className="flex items-center gap-4 mb-6">
+                  <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-amber-400 to-orange-500 flex items-center justify-center shadow-lg">
+                    <CreditCard className="h-7 w-7 text-white" />
+                  </div>
+                  <h3 className="text-xl font-bold text-slate-900">Subscription</h3>
                 </div>
-                <h3 className="text-xl font-bold text-gray-900">Subscription</h3>
-              </div>
 
-              <div className="space-y-4">
-                {getSubscriptionStatus()}
-              </div>
-
-              {!loadingSubscription && (!subscription || subscription.status === 'INCOMPLETE') && (
-                <div className="mt-6 p-4 rounded-lg bg-blue-50 border border-blue-200">
-                  <div className="flex gap-3">
-                    <Shield className="h-5 w-5 text-blue-600 flex-shrink-0 mt-0.5" />
-                    <div>
-                      <h4 className="font-semibold text-blue-900 mb-1">
-                        Unlock Premium Features
-                      </h4>
-                      <p className="text-sm text-blue-800 mb-3">
-                        Upgrade to Premium for unlimited conversions, larger file sizes, and priority processing.
-                      </p>
+                {loadingSubscription ? (
+                  <div className="flex items-center gap-3 p-4">
+                    <Loader2 className="h-5 w-5 animate-spin text-slate-400" />
+                    <span className="text-slate-500">Loading subscription...</span>
+                  </div>
+                ) : !subscription || subscription.status === 'INCOMPLETE' ? (
+                  <div className="space-y-6">
+                    <div className="flex items-center justify-between p-4 rounded-2xl bg-slate-50 border-2 border-slate-100">
+                      <div className="flex items-center gap-3">
+                        <div className="w-3 h-3 rounded-full bg-slate-400" />
+                        <span className="font-semibold text-slate-700">Free Plan</span>
+                      </div>
                       <Link href="/pricing">
-                        <Button size="sm">
-                          View Plans
+                        <Button size="sm" variant="gradient">
+                          Upgrade to Premium
                         </Button>
                       </Link>
                     </div>
+                    <div className="p-6 rounded-2xl bg-gradient-to-br from-indigo-50 to-purple-50 border border-indigo-100">
+                      <div className="flex gap-4">
+                        <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center shadow-lg flex-shrink-0">
+                          <Crown className="h-6 w-6 text-white" />
+                        </div>
+                        <div>
+                          <h4 className="font-bold text-indigo-900 mb-1">Unlock Premium Features</h4>
+                          <p className="text-sm text-indigo-700/80 mb-4">
+                            Get unlimited conversions, larger file sizes, and priority processing.
+                          </p>
+                          <Link href="/pricing">
+                            <Button size="sm" variant="gradient">View Plans</Button>
+                          </Link>
+                        </div>
+                      </div>
+                    </div>
                   </div>
-                </div>
-              )}
+                ) : (
+                  <div className="space-y-4">
+                    <div className="flex items-center justify-between p-4 rounded-2xl bg-emerald-50 border-2 border-emerald-100">
+                      <div className="flex items-center gap-3">
+                        <div className="w-3 h-3 rounded-full bg-emerald-500" />
+                        <span className="font-semibold text-emerald-800">
+                          {subscription.plan === 'MONTHLY' ? 'Premium Monthly' : 'Premium Annual'} - Active
+                        </span>
+                      </div>
+                      <Link href="/api/stripe/portal" target="_blank">
+                        <Button variant="ghost" size="sm">Manage</Button>
+                      </Link>
+                    </div>
+                    {subscription.currentPeriodEnd && (
+                      <p className="text-sm text-slate-500">
+                        {subscription.cancelAtPeriodEnd ? 'Ends' : 'Renews'} on {formatDate(subscription.currentPeriodEnd)}
+                      </p>
+                    )}
+                  </div>
+                )}
+              </div>
             </div>
 
             {/* Account Actions */}
-            <div className="bg-white rounded-2xl shadow-lg p-8">
-              <h3 className="text-xl font-bold text-gray-900 mb-6">Account Actions</h3>
-
-              <div className="space-y-4">
-                <div className="flex items-center justify-between p-4 rounded-lg border border-gray-200">
-                  <div>
-                    <h4 className="font-semibold text-gray-900">Password</h4>
-                    <p className="text-sm text-gray-600">
-                      {session?.user?.image ? 'Signed in with Google' : 'Change your password'}
-                    </p>
+            <div className="relative">
+              <div className="absolute -inset-1 bg-gradient-to-r from-slate-500/5 via-slate-500/10 to-slate-500/5 rounded-[28px] blur-xl" />
+              <div className="relative bg-white/80 backdrop-blur-xl rounded-3xl border border-white/60 shadow-xl p-8">
+                <div className="flex items-center gap-4 mb-6">
+                  <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-slate-600 to-slate-700 flex items-center justify-center shadow-lg">
+                    <Settings className="h-7 w-7 text-white" />
                   </div>
-                  {!session?.user?.image && (
-                    <Button variant="outline" size="sm" disabled>
-                      Change Password
-                    </Button>
-                  )}
+                  <h3 className="text-xl font-bold text-slate-900">Account Actions</h3>
                 </div>
 
-                <div className="flex items-center justify-between p-4 rounded-lg border border-red-200 bg-red-50">
-                  <div>
-                    <h4 className="font-semibold text-red-900">Delete Account</h4>
-                    <p className="text-sm text-red-700">
-                      Permanently delete your account and all data
-                    </p>
+                <div className="space-y-4">
+                  <div className="flex items-center justify-between p-4 rounded-2xl border-2 border-slate-100 bg-slate-50">
+                    <div>
+                      <h4 className="font-semibold text-slate-900">Password</h4>
+                      <p className="text-sm text-slate-500 mt-1">
+                        {session?.user?.image ? 'Signed in with Google' : 'Change your password'}
+                      </p>
+                    </div>
+                    {!session?.user?.image && (
+                      <Link href="/settings">
+                        <Button variant="outline" size="sm" className="border-2">Change</Button>
+                      </Link>
+                    )}
                   </div>
-                  <Button variant="danger" size="sm" disabled>
-                    Delete Account
-                  </Button>
+
+                  <div className="flex items-center justify-between p-4 rounded-2xl border-2 border-red-100 bg-red-50/50">
+                    <div>
+                      <h4 className="font-semibold text-red-700">Delete Account</h4>
+                      <p className="text-sm text-red-600/70 mt-1">
+                        Permanently delete your account and all data
+                      </p>
+                    </div>
+                    <Link href="/settings">
+                      <Button variant="danger" size="sm">Delete</Button>
+                    </Link>
+                  </div>
                 </div>
               </div>
             </div>
           </div>
         </div>
-      </section>
+      </div>
     </div>
   )
 }

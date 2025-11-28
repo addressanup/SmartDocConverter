@@ -1,24 +1,46 @@
 'use client'
 
-import { useState, useCallback } from 'react'
-import { FileSpreadsheet, ArrowRight, Shield, Zap, Table } from 'lucide-react'
+import { useState, useCallback, useEffect } from 'react'
+import { FileSpreadsheet, ArrowRight, Shield, Zap, Table, Sparkles, FileText } from 'lucide-react'
 import { FileUploader, UploadedFile } from '@/components/shared/FileUploader'
 import { ConversionStatus, ConversionState } from '@/components/shared/ConversionStatus'
 import { Button } from '@/components/ui/Button'
 import { useConversionJob } from '@/hooks/useConversionJob'
+import { PageLayout } from '@/components/layout/PageLayout'
+import * as XLSX from 'xlsx'
 
 export default function PdfToExcelPage() {
   const [files, setFiles] = useState<UploadedFile[]>([])
   const [outputFileName, setOutputFileName] = useState<string | null>(null)
+  const [previewData, setPreviewData] = useState<any[][] | null>(null)
 
   const { status, progress, downloadUrl, error, startConversion, reset, download } = useConversionJob()
 
   // Map hook status to ConversionState type (hook returns 'failed' but ConversionState uses 'error')
   const conversionState: ConversionState = status === 'failed' ? 'error' : status
 
+  useEffect(() => {
+    if (status === 'completed' && downloadUrl) {
+      fetch(downloadUrl)
+        .then(res => res.arrayBuffer())
+        .then(ab => {
+          try {
+            const wb = XLSX.read(ab, { type: 'array' })
+            const ws = wb.Sheets[wb.SheetNames[0]]
+            const data = XLSX.utils.sheet_to_json(ws, { header: 1 }).slice(0, 5) // First 5 rows
+            setPreviewData(data as any[][])
+          } catch (err) {
+            console.error('Failed to parse Excel preview:', err)
+          }
+        })
+        .catch(console.error)
+    }
+  }, [status, downloadUrl])
+
   const handleFilesSelected = useCallback((selectedFiles: UploadedFile[]) => {
     setFiles(selectedFiles)
     setOutputFileName(null)
+    setPreviewData(null)
     reset()
   }, [reset])
 
@@ -35,66 +57,55 @@ export default function PdfToExcelPage() {
   const handleReset = () => {
     setFiles([])
     setOutputFileName(null)
+    setPreviewData(null)
     reset()
   }
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      <section className="bg-gradient-to-br from-primary-50 to-white py-16">
-        <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="text-center">
-            <div className="w-16 h-16 bg-primary-100 rounded-2xl flex items-center justify-center mx-auto mb-6">
-              <FileSpreadsheet className="h-8 w-8 text-primary-600" />
-            </div>
-            <h1 className="text-3xl md:text-4xl font-bold text-gray-900 mb-4">
-              PDF to Excel Converter
-            </h1>
-            <p className="text-lg text-gray-600 max-w-2xl mx-auto">
-              Extract tables and data from PDF files into editable Excel spreadsheets.
-              Perfect for data analysis and reporting.
-            </p>
+    <PageLayout
+      title="PDF to Excel"
+      description="Convert PDF tables into editable Excel spreadsheets automatically. Accurate data extraction for financial reports and invoices."
+      icon={FileSpreadsheet}
+    >
+      <div className="max-w-3xl mx-auto">
+        {conversionState === 'idle' || conversionState === 'error' ? (
+          <div className="space-y-8">
+            <FileUploader
+              accept={{ 'application/pdf': ['.pdf'] }}
+              maxFiles={1}
+              maxSize={10 * 1024 * 1024}
+              onFilesSelected={handleFilesSelected}
+              title="Drop your PDF here"
+              description="or click to browse (max 10MB)"
+            />
+
+            {files.length > 0 && conversionState === 'idle' && (
+              <div className="animate-in fade-in slide-in-from-bottom-4 duration-500">
+                <Button
+                  onClick={handleConvert}
+                  className="w-full flex items-center justify-center gap-2 py-6 text-lg"
+                  size="lg"
+                  variant="primary"
+                >
+                  <Sparkles className="w-5 h-5" />
+                  Convert to Excel
+                </Button>
+              </div>
+            )}
+
+            {conversionState === 'error' && (
+              <ConversionStatus
+                state={conversionState}
+                progress={progress}
+                error={error}
+                onReset={handleReset}
+                className="mt-6"
+              />
+            )}
           </div>
-        </div>
-      </section>
-
-      <section className="py-12">
-        <div className="max-w-2xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="bg-white rounded-2xl shadow-lg p-8">
-            {conversionState === 'idle' || conversionState === 'error' ? (
-              <>
-                <FileUploader
-                  accept={{ 'application/pdf': ['.pdf'] }}
-                  maxFiles={1}
-                  maxSize={10 * 1024 * 1024}
-                  onFilesSelected={handleFilesSelected}
-                  title="Drop your PDF here"
-                  description="or click to browse (max 10MB)"
-                />
-
-                {files.length > 0 && conversionState === 'idle' && (
-                  <div className="mt-6">
-                    <Button
-                      onClick={handleConvert}
-                      className="w-full flex items-center justify-center gap-2"
-                      size="lg"
-                    >
-                      Convert to Excel
-                      <ArrowRight className="h-5 w-5" />
-                    </Button>
-                  </div>
-                )}
-
-                {conversionState === 'error' && (
-                  <ConversionStatus
-                    state={conversionState}
-                    progress={progress}
-                    error={error}
-                    onReset={handleReset}
-                    className="mt-6"
-                  />
-                )}
-              </>
-            ) : (
+        ) : (
+          <div className="space-y-6">
+            <div className="glass-panel p-8 rounded-2xl border border-primary-500/20 bg-primary-500/5">
               <ConversionStatus
                 state={conversionState}
                 progress={progress}
@@ -104,47 +115,63 @@ export default function PdfToExcelPage() {
                 onDownload={download}
                 onReset={handleReset}
               />
+            </div>
+
+            {previewData && previewData.length > 0 && (
+              <div className="glass-panel p-6 rounded-2xl border border-white/10 bg-white/5 animate-in fade-in slide-in-from-bottom-4">
+                <div className="flex items-center gap-2 mb-4 text-white font-medium">
+                  <Table className="w-5 h-5 text-green-400" />
+                  <span>Data Preview (First 5 rows)</span>
+                </div>
+                <div className="overflow-x-auto custom-scrollbar rounded-lg border border-white/10">
+                  <table className="w-full text-sm text-left">
+                    <tbody>
+                      {previewData.map((row, rowIndex) => (
+                        <tr 
+                          key={rowIndex} 
+                          className={rowIndex === 0 ? "bg-white/10 font-bold text-white" : "border-t border-white/5 text-gray-300"}
+                        >
+                          {row.map((cell, cellIndex) => (
+                            <td key={cellIndex} className="p-3 min-w-[100px]">
+                              {cell}
+                            </td>
+                          ))}
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
             )}
           </div>
-        </div>
-      </section>
+        )}
 
-      <section className="py-12 bg-white">
-        <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
-          <h2 className="text-2xl font-bold text-gray-900 text-center mb-8">
-            PDF to Excel Features
-          </h2>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-            <div className="text-center">
-              <div className="w-12 h-12 bg-primary-100 rounded-full flex items-center justify-center mx-auto mb-4">
-                <Table className="h-6 w-6 text-primary-600" />
+
+        {/* Feature Highlights */}
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mt-16 border-t border-white/10 pt-12">
+            <div className="text-center group">
+              <div className="w-10 h-10 bg-white/5 rounded-full flex items-center justify-center mx-auto mb-4 group-hover:bg-primary-500/20 transition-colors">
+                <Table className="h-5 w-5 text-gray-400 group-hover:text-primary-400" />
               </div>
-              <h3 className="font-semibold text-gray-900 mb-2">Table Detection</h3>
-              <p className="text-sm text-gray-600">
-                Automatically detects and extracts tables from your PDF.
-              </p>
+              <h3 className="font-semibold text-white mb-2">Table Extraction</h3>
+              <p className="text-sm text-gray-400">Smart detection of rows & columns.</p>
             </div>
-            <div className="text-center">
-              <div className="w-12 h-12 bg-primary-100 rounded-full flex items-center justify-center mx-auto mb-4">
-                <Zap className="h-6 w-6 text-primary-600" />
+            <div className="text-center group">
+               <div className="w-10 h-10 bg-white/5 rounded-full flex items-center justify-center mx-auto mb-4 group-hover:bg-accent-purple/20 transition-colors">
+                <Zap className="h-5 w-5 text-gray-400 group-hover:text-accent-purple" />
               </div>
-              <h3 className="font-semibold text-gray-900 mb-2">Accurate Data</h3>
-              <p className="text-sm text-gray-600">
-                Preserves numbers, dates, and text formatting accurately.
-              </p>
+              <h3 className="font-semibold text-white mb-2">High Accuracy</h3>
+              <p className="text-sm text-gray-400">Preserves data integrity.</p>
             </div>
-            <div className="text-center">
-              <div className="w-12 h-12 bg-primary-100 rounded-full flex items-center justify-center mx-auto mb-4">
-                <Shield className="h-6 w-6 text-primary-600" />
+            <div className="text-center group">
+               <div className="w-10 h-10 bg-white/5 rounded-full flex items-center justify-center mx-auto mb-4 group-hover:bg-accent-cyan/20 transition-colors">
+                <Shield className="h-5 w-5 text-gray-400 group-hover:text-accent-cyan" />
               </div>
-              <h3 className="font-semibold text-gray-900 mb-2">Editable Output</h3>
-              <p className="text-sm text-gray-600">
-                Get a fully editable Excel file ready for analysis.
-              </p>
+              <h3 className="font-semibold text-white mb-2">Secure</h3>
+              <p className="text-sm text-gray-400">Auto-deleted after 1 hour.</p>
             </div>
           </div>
-        </div>
-      </section>
-    </div>
+      </div>
+    </PageLayout>
   )
 }

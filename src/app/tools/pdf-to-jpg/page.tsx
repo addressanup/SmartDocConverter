@@ -1,11 +1,12 @@
 'use client'
 
 import { useState, useCallback } from 'react'
-import { Image, ArrowRight, Shield, Zap, FileText } from 'lucide-react'
+import { Image, ArrowRight, Shield, Zap, FileText, Sparkles } from 'lucide-react'
 import { FileUploader, UploadedFile } from '@/components/shared/FileUploader'
 import { ConversionStatus, ConversionState } from '@/components/shared/ConversionStatus'
 import { Button } from '@/components/ui/Button'
 import { useConversionJob } from '@/hooks/useConversionJob'
+import { PageLayout } from '@/components/layout/PageLayout'
 
 type ImageQuality = 'low' | 'medium' | 'high'
 
@@ -27,7 +28,14 @@ export default function PdfToJpgPage() {
     if (files.length === 0) return
 
     const file = files[0]
-    await startConversion(file.file, 'pdf-to-jpg', { quality })
+    
+    // Map string quality to number
+    let numericQuality = 90
+    if (quality === 'low') numericQuality = 60
+    else if (quality === 'medium') numericQuality = 80
+    else if (quality === 'high') numericQuality = 100
+
+    await startConversion(file.file, 'pdf-to-jpg', { quality: numericQuality })
   }
 
   const handleDownload = () => {
@@ -40,192 +48,110 @@ export default function PdfToJpgPage() {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      {/* Hero Section */}
-      <section className="bg-gradient-to-br from-primary-50 to-white py-16">
-        <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="text-center">
-            <div className="w-16 h-16 bg-primary-100 rounded-2xl flex items-center justify-center mx-auto mb-6">
-              <Image className="h-8 w-8 text-primary-600" />
-            </div>
-            <h1 className="text-3xl md:text-4xl font-bold text-gray-900 mb-4">
-              PDF to JPG Converter
-            </h1>
-            <p className="text-lg text-gray-600 max-w-2xl mx-auto">
-              Convert PDF pages to high-quality JPG images. Each page becomes a
-              separate image file.
-            </p>
-          </div>
-        </div>
-      </section>
+    <PageLayout
+      title="PDF to JPG Converter"
+      description="Convert each page of your PDF document into high-quality JPG images. Supports batch extraction."
+      icon={Image}
+    >
+      <div className="max-w-3xl mx-auto">
+        {conversionState === 'idle' || conversionState === 'error' ? (
+          <div className="space-y-8">
+            <FileUploader
+              accept={{ 'application/pdf': ['.pdf'] }}
+              maxFiles={1}
+              maxSize={20 * 1024 * 1024}
+              onFilesSelected={handleFilesSelected}
+              title="Drop your PDF here"
+              description="or click to browse (max 20MB)"
+            />
 
-      {/* Converter Section */}
-      <section className="py-12">
-        <div className="max-w-2xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="bg-white rounded-2xl shadow-lg p-8">
-            {conversionState === 'idle' || conversionState === 'error' ? (
-              <>
-                <FileUploader
-                  accept={{ 'application/pdf': ['.pdf'] }}
-                  maxFiles={1}
-                  maxSize={20 * 1024 * 1024}
-                  onFilesSelected={handleFilesSelected}
-                  title="Drop your PDF here"
-                  description="or click to browse (max 20MB)"
-                />
-
-                {files.length > 0 && conversionState === 'idle' && (
-                  <div className="mt-6 space-y-4">
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-2">
-                        Image Quality
-                      </label>
-                      <div className="grid grid-cols-3 gap-3">
-                        <button
-                          onClick={() => setQuality('low')}
-                          className={`px-4 py-3 rounded-lg border-2 text-sm font-medium transition-colors ${
-                            quality === 'low'
-                              ? 'border-primary-600 bg-primary-50 text-primary-700'
-                              : 'border-gray-200 bg-white text-gray-700 hover:border-gray-300'
-                          }`}
-                        >
-                          <div className="font-semibold">Low</div>
-                          <div className="text-xs mt-1">72 DPI</div>
-                        </button>
-                        <button
-                          onClick={() => setQuality('medium')}
-                          className={`px-4 py-3 rounded-lg border-2 text-sm font-medium transition-colors ${
-                            quality === 'medium'
-                              ? 'border-primary-600 bg-primary-50 text-primary-700'
-                              : 'border-gray-200 bg-white text-gray-700 hover:border-gray-300'
-                          }`}
-                        >
-                          <div className="font-semibold">Medium</div>
-                          <div className="text-xs mt-1">150 DPI</div>
-                        </button>
-                        <button
-                          onClick={() => setQuality('high')}
-                          className={`px-4 py-3 rounded-lg border-2 text-sm font-medium transition-colors ${
-                            quality === 'high'
-                              ? 'border-primary-600 bg-primary-50 text-primary-700'
-                              : 'border-gray-200 bg-white text-gray-700 hover:border-gray-300'
-                          }`}
-                        >
-                          <div className="font-semibold">High</div>
-                          <div className="text-xs mt-1">300 DPI</div>
-                        </button>
-                      </div>
-                    </div>
-
-                    <Button
-                      onClick={handleConvert}
-                      className="w-full flex items-center justify-center gap-2"
-                      size="lg"
-                    >
-                      Convert to JPG
-                      <ArrowRight className="h-5 w-5" />
-                    </Button>
+            {files.length > 0 && conversionState === 'idle' && (
+              <div className="mt-6 space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500">
+                <div>
+                  <label className="block text-sm font-medium text-gray-300 mb-4">
+                    Image Quality
+                  </label>
+                  <div className="grid grid-cols-3 gap-4">
+                    {[
+                      { id: 'low', label: 'Low', desc: '72 DPI' },
+                      { id: 'medium', label: 'Medium', desc: '150 DPI' },
+                      { id: 'high', label: 'High', desc: '300 DPI' },
+                    ].map((opt) => (
+                      <button
+                        key={opt.id}
+                        onClick={() => setQuality(opt.id as ImageQuality)}
+                        className={`px-4 py-4 rounded-xl border transition-all duration-200 ${
+                          quality === opt.id
+                            ? 'border-primary-500 bg-primary-500/20 text-white shadow-[0_0_15px_rgba(14,165,233,0.3)]'
+                            : 'border-white/10 bg-white/5 text-gray-400 hover:bg-white/10 hover:border-white/20'
+                        }`}
+                      >
+                        <div className="font-bold text-lg mb-1">{opt.label}</div>
+                        <div className="text-xs opacity-70">{opt.desc}</div>
+                      </button>
+                    ))}
                   </div>
-                )}
+                </div>
 
-                <ConversionStatus
-                  state={conversionState}
-                  progress={progress}
-                  error={error}
-                  onReset={handleReset}
-                  className="mt-6"
-                />
-              </>
-            ) : (
-              <ConversionStatus
-                state={conversionState}
-                progress={progress}
-                error={error}
-                downloadUrl={downloadUrl || undefined}
-                fileName="pdf_images.zip"
-                onDownload={handleDownload}
-                onReset={handleReset}
-              />
+                <Button
+                  onClick={handleConvert}
+                  className="w-full flex items-center justify-center gap-2 py-6 text-lg"
+                  size="lg"
+                  variant="primary"
+                >
+                  <Sparkles className="w-5 h-5" />
+                  Convert to JPG
+                </Button>
+              </div>
             )}
-          </div>
-        </div>
-      </section>
 
-      {/* Features Section */}
-      <section className="py-12 bg-white">
-        <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
-          <h2 className="text-2xl font-bold text-gray-900 text-center mb-8">
-            Why Use Our PDF to JPG Converter?
-          </h2>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-            <div className="text-center">
-              <div className="w-12 h-12 bg-primary-100 rounded-full flex items-center justify-center mx-auto mb-4">
-                <Image className="h-6 w-6 text-primary-600" />
-              </div>
-              <h3 className="font-semibold text-gray-900 mb-2">High Quality</h3>
-              <p className="text-sm text-gray-600">
-                Export PDF pages as high-resolution JPG images up to 300 DPI.
-              </p>
-            </div>
-            <div className="text-center">
-              <div className="w-12 h-12 bg-primary-100 rounded-full flex items-center justify-center mx-auto mb-4">
-                <Zap className="h-6 w-6 text-primary-600" />
-              </div>
-              <h3 className="font-semibold text-gray-900 mb-2">Fast Conversion</h3>
-              <p className="text-sm text-gray-600">
-                Convert all PDF pages to images in seconds.
-              </p>
-            </div>
-            <div className="text-center">
-              <div className="w-12 h-12 bg-primary-100 rounded-full flex items-center justify-center mx-auto mb-4">
-                <Shield className="h-6 w-6 text-primary-600" />
-              </div>
-              <h3 className="font-semibold text-gray-900 mb-2">Secure & Private</h3>
-              <p className="text-sm text-gray-600">
-                Files are automatically deleted after 1 hour. We never share your data.
-              </p>
-            </div>
+            <ConversionStatus
+              state={conversionState}
+              progress={progress}
+              error={error}
+              onReset={handleReset}
+              className="mt-6"
+            />
           </div>
-        </div>
-      </section>
+        ) : (
+          <div className="glass-panel p-8 rounded-2xl border border-primary-500/20 bg-primary-500/5">
+            <ConversionStatus
+              state={conversionState}
+              progress={progress}
+              error={error}
+              downloadUrl={downloadUrl || undefined}
+              fileName="pdf_images.zip"
+              onDownload={handleDownload}
+              onReset={handleReset}
+            />
+          </div>
+        )}
 
-      {/* How It Works */}
-      <section className="py-12">
-        <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
-          <h2 className="text-2xl font-bold text-gray-900 text-center mb-8">
-            How to Convert PDF to JPG
-          </h2>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-            <div className="text-center">
-              <div className="w-10 h-10 bg-primary-600 text-white rounded-full flex items-center justify-center mx-auto mb-4 font-bold">
-                1
+        {/* Feature Highlights */}
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mt-16 border-t border-white/10 pt-12">
+            <div className="text-center group">
+              <div className="w-10 h-10 bg-white/5 rounded-full flex items-center justify-center mx-auto mb-4 group-hover:bg-primary-500/20 transition-colors">
+                <Image className="h-5 w-5 text-gray-400 group-hover:text-primary-400" />
               </div>
-              <h3 className="font-semibold text-gray-900 mb-2">Upload PDF</h3>
-              <p className="text-sm text-gray-600">
-                Drag and drop your PDF file or click to browse.
-              </p>
+              <h3 className="font-semibold text-white mb-2">High Res</h3>
+              <p className="text-sm text-gray-400">Up to 300 DPI quality.</p>
             </div>
-            <div className="text-center">
-              <div className="w-10 h-10 bg-primary-600 text-white rounded-full flex items-center justify-center mx-auto mb-4 font-bold">
-                2
+            <div className="text-center group">
+               <div className="w-10 h-10 bg-white/5 rounded-full flex items-center justify-center mx-auto mb-4 group-hover:bg-accent-purple/20 transition-colors">
+                <Zap className="h-5 w-5 text-gray-400 group-hover:text-accent-purple" />
               </div>
-              <h3 className="font-semibold text-gray-900 mb-2">Choose Quality</h3>
-              <p className="text-sm text-gray-600">
-                Select the image quality (DPI) for your JPG files.
-              </p>
+              <h3 className="font-semibold text-white mb-2">Batch Export</h3>
+              <p className="text-sm text-gray-400">All pages at once.</p>
             </div>
-            <div className="text-center">
-              <div className="w-10 h-10 bg-primary-600 text-white rounded-full flex items-center justify-center mx-auto mb-4 font-bold">
-                3
+            <div className="text-center group">
+               <div className="w-10 h-10 bg-white/5 rounded-full flex items-center justify-center mx-auto mb-4 group-hover:bg-accent-cyan/20 transition-colors">
+                <Shield className="h-5 w-5 text-gray-400 group-hover:text-accent-cyan" />
               </div>
-              <h3 className="font-semibold text-gray-900 mb-2">Download</h3>
-              <p className="text-sm text-gray-600">
-                Download your images as a ZIP file.
-              </p>
+              <h3 className="font-semibold text-white mb-2">Secure</h3>
+              <p className="text-sm text-gray-400">Auto-deleted after 1 hour.</p>
             </div>
           </div>
-        </div>
-      </section>
-    </div>
+      </div>
+    </PageLayout>
   )
 }
