@@ -50,3 +50,4 @@ agents/*/TODOS.md
 agents/*/blockers.md
 agents/*/output/*
 !agents/*/output/.gitkeep
+vercel.env
