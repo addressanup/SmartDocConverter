@@ -2,6 +2,10 @@ import { NextRequest, NextResponse } from 'next/server'
 import { randomUUID } from 'crypto'
 import fs from 'fs'
 import path from 'path'
+
+// Force Node.js runtime for file system operations
+export const runtime = 'nodejs'
+export const dynamic = 'force-dynamic'
 import { convertPdfToWord } from '@/lib/converters/pdf-to-word'
 import { convertWordToPdf } from '@/lib/converters/word-to-pdf'
 import { compressPdf } from '@/lib/converters/compress-pdf'

@@ -2,6 +2,10 @@ import { NextRequest, NextResponse } from 'next/server'
 import fs from 'fs'
 import path from 'path'
 
+// Force Node.js runtime for file system operations
+export const runtime = 'nodejs'
+export const dynamic = 'force-dynamic'
+
 // Import the jobs map from the convert route
 // Note: In production, this should be stored in Redis or a database
 // For now, we'll need to access it via a shared module

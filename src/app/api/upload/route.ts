@@ -5,6 +5,10 @@ import { auth } from '@/lib/auth'
 import { checkRateLimit, checkIpRateLimit, getClientIp } from '@/lib/ratelimit'
 import { checkUsageLimit, getUserTier } from '@/lib/usage'
 
+// Force Node.js runtime for file system operations
+export const runtime = 'nodejs'
+export const dynamic = 'force-dynamic'
+
 const MAX_FILE_SIZE_FREE = parseInt(process.env.MAX_FILE_SIZE_FREE || '10485760') // 10MB
 const MAX_FILE_SIZE_PREMIUM = parseInt(process.env.MAX_FILE_SIZE_PREMIUM || '52428800') // 50MB
 const ALLOWED_MIME_TYPES = [
