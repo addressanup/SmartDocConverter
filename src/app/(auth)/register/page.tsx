@@ -1,7 +1,7 @@
 import { Metadata } from "next"
 import RegisterForm from "@/components/auth/RegisterForm"
 import Link from "next/link"
-import { FileText, Sparkles, Shield, Zap, Check } from "lucide-react"
+import { FileText, Sparkles, Check } from "lucide-react"
 
 export const metadata: Metadata = {
   title: "Create Account | SmartDocConverter",

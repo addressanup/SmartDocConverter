@@ -392,7 +392,7 @@ function calculateColumnWidths(rows: string[][]): { wch: number }[] {
  */
 function sanitizeSheetName(name: string): string {
   return name
-    .replace(/[\\/*?:\[\]]/g, '_')
+    .replace(/[\\/*?:[\]]/g, '_')
     .substring(0, 31);
 }
 

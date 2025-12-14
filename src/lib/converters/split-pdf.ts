@@ -118,7 +118,7 @@ function parseSplitRanges(
       break;
 
     case 'range':
-    case 'custom':
+    case 'custom': {
       // Parse page ranges like "1-3,5,7-10"
       if (!options.pages) {
         throw new Error('pages option is required for range/custom mode');
@@ -158,8 +158,9 @@ function parseSplitRanges(
         }
       }
       break;
+    }
 
-    case 'every':
+    case 'every': {
       // Split every N pages
       if (!options.everyN || options.everyN < 1) {
         throw new Error('everyN option must be a positive number for every mode');
@@ -172,6 +173,7 @@ function parseSplitRanges(
         ranges.push({ start, end });
       }
       break;
+    }
 
     default:
       throw new Error(`Unsupported split mode: ${mode}`);

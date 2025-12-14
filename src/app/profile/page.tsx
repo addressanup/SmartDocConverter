@@ -261,7 +261,7 @@ export default function ProfilePage() {
                         <Calendar className="h-5 w-5 text-slate-500" />
                       </div>
                       <span className="font-medium text-slate-900">
-                        {formatDate((session?.user as any)?.createdAt)}
+                        {formatDate(session?.user?.createdAt)}
                       </span>
                     </div>
                   </div>

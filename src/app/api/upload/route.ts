@@ -9,11 +9,12 @@ export const maxDuration = 60
 
 // Use /tmp on Vercel
 const UPLOAD_DIR = process.env.VERCEL ? '/tmp/uploads' : './uploads'
+const MAX_FILE_SIZE = parseInt(process.env.MAX_FILE_SIZE_FREE || '10485760', 10) // 10MB default
 
 async function ensureDir(dir: string) {
   try {
     await fs.mkdir(dir, { recursive: true })
-  } catch (e) {
+  } catch {
     // ignore if exists
   }
 }
@@ -46,10 +47,11 @@ export async function POST(request: NextRequest) {
 
     console.log('[Upload] File:', file.name, file.size, file.type)
 
-    // Validate file size (10MB limit)
-    if (file.size > 10 * 1024 * 1024) {
+    // Validate file size
+    if (file.size > MAX_FILE_SIZE) {
+      const maxMB = Math.round(MAX_FILE_SIZE / (1024 * 1024))
       return NextResponse.json(
-        { error: 'File too large. Maximum size is 10MB.' },
+        { error: `File too large. Maximum size is ${maxMB}MB.` },
         { status: 400 }
       )
     }

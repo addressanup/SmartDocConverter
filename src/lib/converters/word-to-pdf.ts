@@ -230,7 +230,7 @@ function parseHtmlToElements(html: string): TextElement[] {
  */
 function parseBlockElement(tag: string, content: string): TextElement {
   // Remove HTML tags and decode entities
-  let text = content
+  const text = content
     .replace(/<br\s*\/?>/gi, ' ')
     .replace(/<[^>]+>/g, '')
     .replace(/&nbsp;/g, ' ')

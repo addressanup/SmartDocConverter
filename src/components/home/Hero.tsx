@@ -13,18 +13,18 @@ const features = [
 export function Hero() {
   return (
     <section className="relative min-h-screen flex items-center pt-20 overflow-hidden">
-      {/* Ambient Background */}
-      <div className="absolute inset-0 ambient-bg" />
-      
-      {/* Animated Gradient Orbs */}
-      <div className="absolute top-1/4 -right-32 w-[600px] h-[600px] bg-gradient-to-br from-indigo-200/60 via-purple-200/40 to-transparent rounded-full blur-3xl animate-float" />
-      <div className="absolute -bottom-32 -left-32 w-[500px] h-[500px] bg-gradient-to-tr from-cyan-200/50 via-blue-200/30 to-transparent rounded-full blur-3xl animate-float" style={{ animationDelay: '-3s' }} />
-      <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[800px] h-[800px] opacity-30">
+      {/* Ambient Background - Decorative */}
+      <div className="absolute inset-0 ambient-bg" aria-hidden="true" />
+
+      {/* Animated Gradient Orbs - Decorative */}
+      <div className="absolute top-1/4 -right-32 w-[600px] h-[600px] bg-gradient-to-br from-indigo-200/60 via-purple-200/40 to-transparent rounded-full blur-3xl animate-float" aria-hidden="true" />
+      <div className="absolute -bottom-32 -left-32 w-[500px] h-[500px] bg-gradient-to-tr from-cyan-200/50 via-blue-200/30 to-transparent rounded-full blur-3xl animate-float" style={{ animationDelay: '-3s' }} aria-hidden="true" />
+      <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[800px] h-[800px] opacity-30" aria-hidden="true">
         <div className="absolute inset-0 bg-gradient-to-br from-indigo-300/30 via-transparent to-purple-300/20 rounded-full animate-morph" />
       </div>
-      
-      {/* Grid Pattern */}
-      <div className="absolute inset-0 grid-pattern pointer-events-none" />
+
+      {/* Grid Pattern - Decorative */}
+      <div className="absolute inset-0 grid-pattern pointer-events-none" aria-hidden="true" />
 
       <div className="relative z-10 max-w-7xl mx-auto px-6 w-full py-16 lg:py-24">
         <div className="grid lg:grid-cols-12 gap-12 lg:gap-8 items-center">
@@ -94,14 +94,14 @@ export function Hero() {
           </div>
 
           {/* Right Visual - Floating Cards */}
-          <div className="lg:col-span-5 relative">
-            <div className="relative w-full max-w-md mx-auto lg:ml-auto">
+          <div className="lg:col-span-5 relative hidden md:block">
+            <div className="relative w-full max-w-md mx-auto lg:ml-auto overflow-visible">
               {/* Background Glow */}
-              <div className="absolute -inset-4 bg-gradient-to-br from-indigo-500/20 via-purple-500/10 to-pink-500/20 rounded-3xl blur-2xl animate-pulse-glow" />
-              
-              {/* Stacked Cards Effect */}
-              <div className="absolute -top-4 -left-4 w-full h-full bg-gradient-to-br from-purple-100 to-purple-50 rounded-3xl -rotate-6 shadow-lg" />
-              <div className="absolute -bottom-4 -right-4 w-full h-full bg-gradient-to-br from-indigo-100 to-blue-50 rounded-3xl rotate-6 shadow-lg" />
+              <div className="absolute -inset-4 bg-gradient-to-br from-indigo-500/20 via-purple-500/10 to-pink-500/20 rounded-3xl blur-2xl animate-pulse-glow" aria-hidden="true" />
+
+              {/* Stacked Cards Effect - Hidden on tablets, visible on lg+ */}
+              <div className="absolute -top-4 -left-4 w-full h-full bg-gradient-to-br from-purple-100 to-purple-50 rounded-3xl -rotate-6 shadow-lg hidden lg:block" aria-hidden="true" />
+              <div className="absolute -bottom-4 -right-4 w-full h-full bg-gradient-to-br from-indigo-100 to-blue-50 rounded-3xl rotate-6 shadow-lg hidden lg:block" aria-hidden="true" />
               
               {/* Main Card */}
               <div className="relative glass rounded-3xl p-8 shadow-2xl border border-white/40 animate-slide-in-right">
@@ -155,11 +155,11 @@ export function Hero() {
                 </div>
               </div>
 
-              {/* Floating Elements */}
-              <div className="absolute -top-8 -right-8 w-20 h-20 bg-gradient-to-br from-amber-400 to-orange-500 rounded-2xl flex items-center justify-center shadow-lg animate-float rotate-12">
+              {/* Floating Elements - Decorative, hidden on tablets */}
+              <div className="absolute -top-8 -right-8 w-20 h-20 bg-gradient-to-br from-amber-400 to-orange-500 rounded-2xl flex items-center justify-center shadow-lg animate-float rotate-12 hidden lg:flex" aria-hidden="true">
                 <Zap className="w-8 h-8 text-white" />
               </div>
-              <div className="absolute -bottom-6 -left-6 w-16 h-16 bg-gradient-to-br from-emerald-400 to-teal-500 rounded-xl flex items-center justify-center shadow-lg animate-float -rotate-12" style={{ animationDelay: '-2s' }}>
+              <div className="absolute -bottom-6 -left-6 w-16 h-16 bg-gradient-to-br from-emerald-400 to-teal-500 rounded-xl flex items-center justify-center shadow-lg animate-float -rotate-12 hidden lg:flex" style={{ animationDelay: '-2s' }} aria-hidden="true">
                 <Shield className="w-6 h-6 text-white" />
               </div>
             </div>

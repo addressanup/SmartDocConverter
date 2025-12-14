@@ -1,3 +1,15 @@
+/**
+ * @deprecated This async job-based conversion API is currently broken on Vercel
+ * due to in-memory job storage not persisting across serverless function invocations.
+ * Use /api/convert-sync for synchronous conversions instead.
+ *
+ * TODO: To restore async functionality, implement persistent job storage with:
+ * - Redis (Upstash) for job state
+ * - S3/R2 for file storage
+ * - Or migrate to a persistent backend (Railway, Cloud Run)
+ *
+ * See CONVERSION_ENGINE_OPTIONS.md for architecture discussion.
+ */
 import { NextRequest, NextResponse } from 'next/server'
 import { randomUUID } from 'crypto'
 import fs from 'fs'

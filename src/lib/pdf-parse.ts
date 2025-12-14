@@ -1,7 +1,7 @@
 // Wrapper for pdf-parse that avoids the test file loading issue
 // pdf-parse 1.1.1 tries to load a test file on require which fails on Vercel
 
-// eslint-disable-next-line @typescript-eslint/no-var-requires
+// eslint-disable-next-line @typescript-eslint/no-require-imports
 const pdfParse = require('pdf-parse/lib/pdf-parse.js');
 
 export async function parsePdf(dataBuffer: Buffer): Promise<{

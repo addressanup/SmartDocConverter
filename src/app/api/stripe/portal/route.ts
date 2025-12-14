@@ -3,7 +3,7 @@ import { auth } from '@/lib/auth'
 import { createCustomerPortalSession } from '@/lib/stripe'
 import { prisma } from '@/lib/db'
 
-export async function POST(req: NextRequest) {
+export async function POST(_req: NextRequest) {
   try {
     // Check if user is authenticated
     const session = await auth()

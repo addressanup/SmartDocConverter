@@ -94,10 +94,9 @@ export default function JpgToPdfPage() {
                     style={{ animationDelay: `${index * 50}ms` }}
                   >
                     <div className="w-12 h-12 bg-black/40 rounded-lg overflow-hidden flex-shrink-0 border border-white/10">
-                      {/* eslint-disable-next-line @next/next/no-img-element */}
-                      <img 
-                        src={file.preview} 
-                        alt="preview" 
+                      <img
+                        src={file.preview}
+                        alt="preview"
                         className="w-full h-full object-cover"
                       />
                     </div>

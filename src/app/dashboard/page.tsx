@@ -15,7 +15,6 @@ import {
   Sparkles,
   ArrowRight,
   Zap,
-  Shield,
 } from 'lucide-react'
 import { Button } from '@/components/ui/Button'
 
@@ -42,6 +41,7 @@ function DashboardContent() {
   const [subscription, setSubscription] = useState<SubscriptionData | null>(null)
   const [isLoadingPortal, setIsLoadingPortal] = useState(false)
   const [showCheckoutSuccess, setShowCheckoutSuccess] = useState(false)
+  const [error, setError] = useState<string | null>(null)
 
   useEffect(() => {
     if (searchParams.get('checkout') === 'success') {
@@ -67,11 +67,15 @@ function DashboardContent() {
   const fetchUsageData = async () => {
     try {
       const response = await fetch('/api/usage')
-      if (response.ok) {
-        const data = await response.json()
-        setUsage(data)
+      if (!response.ok) {
+        throw new Error('Failed to load usage data')
       }
-    } catch (error) {
+      const data = await response.json()
+      setUsage(data)
+      setError(null)
+    } catch (err) {
+      console.error('Usage fetch error:', err)
+      setError('Unable to load usage data. Using defaults.')
       setUsage({
         conversionsUsed: 0,
         conversionsRemaining: 5,
@@ -85,11 +89,13 @@ function DashboardContent() {
   const fetchSubscriptionData = async () => {
     try {
       const response = await fetch('/api/subscription')
-      if (response.ok) {
-        const data = await response.json()
-        setSubscription(data)
+      if (!response.ok) {
+        throw new Error('Failed to load subscription data')
       }
-    } catch (error) {
+      const data = await response.json()
+      setSubscription(data)
+    } catch (err) {
+      console.error('Subscription fetch error:', err)
       setSubscription({
         tier: 'FREE',
         status: 'none',
@@ -107,7 +113,7 @@ function DashboardContent() {
         const { url } = await response.json()
         window.location.href = url
       }
-    } catch (error) {
+    } catch {
       alert('Failed to open subscription management')
     } finally {
       setIsLoadingPortal(false)
@@ -167,6 +173,19 @@ function DashboardContent() {
                 </div>
                 <button onClick={() => setShowCheckoutSuccess(false)} className="text-slate-400 hover:text-slate-600 text-2xl">&times;</button>
               </div>
+            </div>
+          )}
+
+          {/* Error Banner */}
+          {error && (
+            <div className="mb-8 bg-amber-50 border border-amber-200 rounded-2xl p-4 flex items-center justify-between animate-slide-down">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-xl bg-amber-100 flex items-center justify-center">
+                  <span className="text-amber-600 font-bold">!</span>
+                </div>
+                <p className="text-sm font-medium text-amber-800">{error}</p>
+              </div>
+              <button onClick={() => setError(null)} className="text-amber-400 hover:text-amber-600 text-xl">&times;</button>
             </div>
           )}
 

@@ -55,16 +55,24 @@ export function Footer() {
               </p>
               
               {/* Newsletter */}
-              <div className="flex gap-2">
+              <form className="flex gap-2" onSubmit={(e) => e.preventDefault()}>
+                <label htmlFor="newsletter-email" className="sr-only">
+                  Email address for newsletter
+                </label>
                 <input
+                  id="newsletter-email"
                   type="email"
                   placeholder="Enter your email"
-                  className="flex-1 px-4 py-3 bg-white/5 border border-white/10 rounded-xl text-white placeholder-slate-500 text-sm focus:outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20 transition-all"
+                  autoComplete="email"
+                  className="flex-1 px-4 py-3 bg-white/5 border border-white/10 rounded-xl text-white placeholder-slate-500 text-sm focus:outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20 transition-all hover:border-white/20"
                 />
-                <button className="px-5 py-3 bg-gradient-to-r from-indigo-500 to-purple-500 text-white text-sm font-semibold rounded-xl hover:shadow-lg hover:shadow-indigo-500/25 transition-all">
+                <button
+                  type="submit"
+                  className="px-5 py-3 bg-gradient-to-r from-indigo-500 to-purple-500 text-white text-sm font-semibold rounded-xl hover:shadow-lg hover:shadow-indigo-500/25 transition-all focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2 focus:ring-offset-slate-900"
+                >
                   Subscribe
                 </button>
-              </div>
+              </form>
             </div>
 
             {/* Links */}

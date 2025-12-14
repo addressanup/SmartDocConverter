@@ -67,7 +67,7 @@ export async function protectPdf(
       const ownerPwd = options.ownerPassword || options.userPassword;
       
       // Build qpdf command with permissions
-      let qpdfArgs = [
+      const qpdfArgs = [
         `--encrypt "${userPwd}" "${ownerPwd}" 256`,
       ];
 

@@ -45,8 +45,8 @@ export async function mergePdfs(
       console.log(`[Merge PDF] Processing file ${i + 1}/${inputPaths.length}: ${path.basename(inputPath)}`);
 
       try {
-        // Read the PDF file
-        const pdfBytes = fs.readFileSync(inputPath);
+        // Read the PDF file and convert to Uint8Array for pdf-lib compatibility
+        const pdfBytes = new Uint8Array(fs.readFileSync(inputPath));
 
         // Load the PDF document
         const pdf = await PDFDocument.load(pdfBytes);

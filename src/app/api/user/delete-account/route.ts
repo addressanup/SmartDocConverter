@@ -78,21 +78,7 @@ export async function DELETE(request: NextRequest) {
         where: { userId },
       })
 
-      // 7. Update ConversionJobs to remove user reference (set to null instead of delete)
-      // This preserves conversion history for analytics while removing PII
-      await tx.conversionJob.updateMany({
-        where: { userId },
-        data: { userId: null },
-      })
-
-      // 8. Update FileMetadata to remove user reference (set to null instead of delete)
-      // Files will be cleaned up by the existing cleanup job based on expiresAt
-      await tx.fileMetadata.updateMany({
-        where: { userId },
-        data: { userId: null },
-      })
-
-      // 9. Finally, delete the User record
+      // 7. Finally, delete the User record
       await tx.user.delete({
         where: { id: userId },
       })

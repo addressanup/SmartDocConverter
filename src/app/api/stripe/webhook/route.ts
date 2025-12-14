@@ -168,11 +168,26 @@ async function handleCheckoutSessionCompleted(session: Stripe.Checkout.Session) 
  * Handle subscription update
  */
 async function handleSubscriptionUpdated(subscription: Stripe.Subscription) {
-  const userId = subscription.metadata?.userId
+  // Try to get userId from metadata, fallback to DB lookup
+  let userId = subscription.metadata?.userId
 
   if (!userId) {
-    console.log('No userId found in subscription metadata')
-    return
+    // Fallback: lookup by stripeSubscriptionId or stripeCustomerId
+    const dbSubscription = await prisma.subscription.findFirst({
+      where: {
+        OR: [
+          { stripeSubscriptionId: subscription.id },
+          { stripeCustomerId: subscription.customer as string },
+        ],
+      },
+      select: { userId: true },
+    })
+
+    if (!dbSubscription) {
+      console.error('No subscription found for:', subscription.id, subscription.customer)
+      return
+    }
+    userId = dbSubscription.userId
   }
 
   const priceId = subscription.items.data[0]?.price.id
@@ -212,11 +227,26 @@ async function handleSubscriptionUpdated(subscription: Stripe.Subscription) {
  * Handle subscription deletion/cancellation
  */
 async function handleSubscriptionDeleted(subscription: Stripe.Subscription) {
-  const userId = subscription.metadata?.userId
+  // Try to get userId from metadata, fallback to DB lookup
+  let userId = subscription.metadata?.userId
 
   if (!userId) {
-    console.log('No userId found in subscription metadata')
-    return
+    // Fallback: lookup by stripeSubscriptionId or stripeCustomerId
+    const dbSubscription = await prisma.subscription.findFirst({
+      where: {
+        OR: [
+          { stripeSubscriptionId: subscription.id },
+          { stripeCustomerId: subscription.customer as string },
+        ],
+      },
+      select: { userId: true },
+    })
+
+    if (!dbSubscription) {
+      console.error('No subscription found for deletion:', subscription.id, subscription.customer)
+      return
+    }
+    userId = dbSubscription.userId
   }
 
   // Update subscription status to CANCELED
@@ -249,20 +279,20 @@ async function handleInvoicePaymentSucceeded(invoice: Stripe.Invoice) {
     return
   }
 
-  // Retrieve subscription to get user ID
-  const subscription = await stripe.subscriptions.retrieve(subscriptionId)
-  const userId = subscription.metadata?.userId
-
-  if (!userId) {
-    return
-  }
-
-  // Update subscription status to ACTIVE if it was PAST_DUE
+  // Find subscription in our database
   const dbSubscription = await prisma.subscription.findUnique({
     where: { stripeSubscriptionId: subscriptionId },
   })
 
-  if (dbSubscription?.status === 'PAST_DUE') {
+  if (!dbSubscription) {
+    console.log('No subscription found for invoice:', subscriptionId)
+    return
+  }
+
+  const userId = dbSubscription.userId
+
+  // Update subscription status to ACTIVE if it was PAST_DUE
+  if (dbSubscription.status === 'PAST_DUE') {
     await prisma.subscription.update({
       where: { stripeSubscriptionId: subscriptionId },
       data: { status: 'ACTIVE' },
@@ -289,13 +319,17 @@ async function handleInvoicePaymentFailed(invoice: Stripe.Invoice) {
     return
   }
 
-  // Retrieve subscription to get user ID
-  const subscription = await stripe.subscriptions.retrieve(subscriptionId)
-  const userId = subscription.metadata?.userId
+  // Find subscription in our database
+  const dbSubscription = await prisma.subscription.findUnique({
+    where: { stripeSubscriptionId: subscriptionId },
+  })
 
-  if (!userId) {
+  if (!dbSubscription) {
+    console.log('No subscription found for failed invoice:', subscriptionId)
     return
   }
+
+  const userId = dbSubscription.userId
 
   // Update subscription status to PAST_DUE
   await prisma.subscription.update({

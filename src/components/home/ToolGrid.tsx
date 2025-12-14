@@ -8,6 +8,8 @@ import {
   Type, ArrowUpRight, Search, Sparkles
 } from 'lucide-react'
 import { cn } from '@/lib/utils'
+import { Input } from '@/components/ui/Input'
+import { GradientBadge } from '@/components/ui/Badge'
 
 const tools = [
   {
@@ -138,10 +140,10 @@ export function ToolGrid() {
 
   return (
     <section id="tools" className="py-32 relative overflow-hidden">
-      {/* Background */}
-      <div className="absolute inset-0 bg-white" />
-      <div className="absolute top-0 right-0 w-[600px] h-[600px] bg-gradient-to-bl from-indigo-50 to-transparent rounded-full blur-3xl" />
-      <div className="absolute bottom-0 left-0 w-[500px] h-[500px] bg-gradient-to-tr from-purple-50 to-transparent rounded-full blur-3xl" />
+      {/* Background - Decorative */}
+      <div className="absolute inset-0 bg-white" aria-hidden="true" />
+      <div className="absolute top-0 right-0 w-[600px] h-[600px] bg-gradient-to-bl from-indigo-50 to-transparent rounded-full blur-3xl" aria-hidden="true" />
+      <div className="absolute bottom-0 left-0 w-[500px] h-[500px] bg-gradient-to-tr from-purple-50 to-transparent rounded-full blur-3xl" aria-hidden="true" />
 
       <div className="relative z-10 max-w-7xl mx-auto px-6">
         {/* Section Header */}
@@ -162,15 +164,18 @@ export function ToolGrid() {
 
           {/* Search */}
           <div className="relative lg:w-80">
-            <div className="absolute inset-0 bg-gradient-to-r from-indigo-500/10 to-purple-500/10 rounded-2xl blur-xl opacity-0 focus-within:opacity-100 transition-opacity" />
+            <div className="absolute inset-0 bg-gradient-to-r from-indigo-500/10 to-purple-500/10 rounded-2xl blur-xl opacity-0 focus-within:opacity-100 transition-opacity" aria-hidden="true" />
             <div className="relative">
-              <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-400" />
-              <input
+              <label htmlFor="tool-search" className="sr-only">Search tools</label>
+              <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-400 pointer-events-none z-10" />
+              <Input
+                id="tool-search"
                 type="text"
                 placeholder="Search tools..."
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                className="w-full pl-12 pr-4 py-4 text-base bg-white border-2 border-slate-100 rounded-2xl text-slate-900 placeholder-slate-400 focus:outline-none focus:border-indigo-300 focus:ring-4 focus:ring-indigo-100 transition-all"
+                inputSize="lg"
+                className="pl-12 border-2 border-slate-100 rounded-2xl"
               />
             </div>
           </div>
@@ -208,9 +213,9 @@ export function ToolGrid() {
               >
                 {/* Popular Badge */}
                 {tool.popular && (
-                  <div className="absolute top-4 right-4 px-2.5 py-1 text-[10px] font-bold uppercase tracking-wider bg-gradient-to-r from-amber-400 to-orange-500 text-white rounded-full shadow-sm">
+                  <GradientBadge gradient="warning" size="sm" className="absolute top-4 right-4 uppercase tracking-wider">
                     Popular
-                  </div>
+                  </GradientBadge>
                 )}
 
                 {/* Hover Gradient Background */}

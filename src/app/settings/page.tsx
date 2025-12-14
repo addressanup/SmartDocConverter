@@ -7,7 +7,7 @@ import { useForm } from "react-hook-form"
 import { zodResolver } from "@hookform/resolvers/zod"
 import { z } from "zod"
 import Link from "next/link"
-import { Shield, Bell, Trash2, ArrowLeft, Lock, Sparkles, AlertTriangle } from "lucide-react"
+import { Shield, Trash2, ArrowLeft, Lock, Sparkles, AlertTriangle } from "lucide-react"
 import { Button } from "@/components/ui/Button"
 
 const passwordSchema = z.object({
@@ -26,7 +26,6 @@ export default function SettingsPage() {
   const router = useRouter()
   const [isLoading, setIsLoading] = useState(false)
   const [message, setMessage] = useState<{ type: 'success' | 'error', text: string } | null>(null)
-  const [emailNotifications, setEmailNotifications] = useState(true)
   const [showDeleteDialog, setShowDeleteDialog] = useState(false)
   const [deleteConfirmation, setDeleteConfirmation] = useState("")
 
@@ -89,11 +88,6 @@ export default function SettingsPage() {
     }
   }
 
-  const handleNotificationToggle = async () => {
-    setEmailNotifications(!emailNotifications)
-    setMessage({ type: 'success', text: 'Notification preferences updated' })
-  }
-
   const handleDeleteAccount = async () => {
     if (deleteConfirmation !== "DELETE") {
       setMessage({ type: 'error', text: 'Please type DELETE to confirm' })
@@ -102,7 +96,11 @@ export default function SettingsPage() {
 
     setIsLoading(true)
     try {
-      const response = await fetch('/api/user/delete-account', { method: 'DELETE' })
+      const response = await fetch('/api/user/delete-account', {
+        method: 'DELETE',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ confirmation: 'DELETE' }),
+      })
 
       if (!response.ok) {
         throw new Error('Failed to delete account')
@@ -153,7 +151,7 @@ export default function SettingsPage() {
               </div>
               <div>
                 <h1 className="text-3xl font-extrabold text-slate-900">Settings</h1>
-                <p className="text-slate-500">Manage your account settings, preferences, and security.</p>
+                <p className="text-slate-500">Manage your account settings and security.</p>
               </div>
             </div>
           </div>
@@ -277,46 +275,6 @@ export default function SettingsPage() {
                     {isLoading ? "Changing Password..." : "Change Password"}
                   </Button>
                 </form>
-              </div>
-            </div>
-
-            {/* Notification Preferences */}
-            <div className="relative">
-              <div className="absolute -inset-1 bg-gradient-to-r from-cyan-500/10 via-blue-500/10 to-indigo-500/10 rounded-[28px] blur-xl" />
-              <div className="relative bg-white/80 backdrop-blur-xl rounded-3xl border border-white/60 shadow-xl p-8">
-                <div className="flex items-center gap-4 mb-6">
-                  <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-cyan-500 to-blue-600 flex items-center justify-center shadow-lg">
-                    <Bell className="h-6 w-6 text-white" />
-                  </div>
-                  <div>
-                    <h2 className="text-xl font-bold text-slate-900">Notifications</h2>
-                    <p className="text-sm text-slate-500">Manage email preferences</p>
-                  </div>
-                </div>
-
-                <div className="flex items-center justify-between p-5 rounded-2xl bg-slate-50 border-2 border-slate-100">
-                  <div>
-                    <p className="font-semibold text-slate-900">Email Notifications</p>
-                    <p className="text-sm text-slate-500 mt-1">
-                      Receive updates about your conversions and account
-                    </p>
-                  </div>
-                  <button
-                    type="button"
-                    onClick={handleNotificationToggle}
-                    className={`relative inline-flex h-7 w-12 flex-shrink-0 cursor-pointer rounded-full transition-colors duration-200 ease-in-out focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2 ${
-                      emailNotifications ? 'bg-gradient-to-r from-indigo-500 to-purple-500' : 'bg-slate-300'
-                    }`}
-                    role="switch"
-                    aria-checked={emailNotifications}
-                  >
-                    <span
-                      className={`pointer-events-none inline-block h-6 w-6 transform rounded-full bg-white shadow-lg ring-0 transition duration-200 ease-in-out ${
-                        emailNotifications ? 'translate-x-5' : 'translate-x-0'
-                      }`}
-                    />
-                  </button>
-                </div>
               </div>
             </div>
 

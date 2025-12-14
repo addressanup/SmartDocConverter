@@ -3,18 +3,23 @@ import { randomUUID } from 'crypto'
 import { promises as fs } from 'fs'
 import fsSync from 'fs'
 import path from 'path'
+import { auth } from '@/lib/auth'
+import { checkUsageLimit, incrementUsage, getUserTier } from '@/lib/usage'
+import { getClientIp } from '@/lib/ratelimit'
 
 export const runtime = 'nodejs'
 export const dynamic = 'force-dynamic'
 export const maxDuration = 60
 
 const UPLOAD_DIR = process.env.VERCEL ? '/tmp/uploads' : './uploads'
+const MAX_FILE_SIZE_FREE = parseInt(process.env.MAX_FILE_SIZE_FREE || '10485760', 10) // 10MB default
+const MAX_FILE_SIZE_PREMIUM = parseInt(process.env.MAX_FILE_SIZE_PREMIUM || '52428800', 10) // 50MB default
 
 async function ensureDir(dir: string) {
   try {
     await fs.mkdir(dir, { recursive: true })
-  } catch (e) {
-    // ignore
+  } catch {
+    // ignore if exists
   }
 }
 
@@ -48,8 +53,27 @@ async function getConverter(type: string) {
 }
 
 export async function POST(request: NextRequest) {
+  let inputPath: string | null = null
+  let outputPath: string | null = null
+
   try {
     console.log('[Convert-Sync] Starting...')
+
+    // Get user session and rate limit info
+    const session = await auth()
+    const userId = session?.user?.id || null
+    const fingerprint = request.headers.get('x-fingerprint')
+    const ipAddress = getClientIp(request)
+
+    // Check usage limits before processing
+    const { allowed, message } = await checkUsageLimit(userId, fingerprint, ipAddress)
+    if (!allowed) {
+      console.log(`[Convert-Sync] Rate limit exceeded for user: ${userId || fingerprint || ipAddress}`)
+      return NextResponse.json(
+        { error: 'Daily conversion limit reached', details: message },
+        { status: 429 }
+      )
+    }
 
     const formData = await request.formData()
     const file = formData.get('file') as File | null
@@ -64,14 +88,25 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'No conversion type provided' }, { status: 400 })
     }
 
-    console.log(`[Convert-Sync] File: ${file.name}, Type: ${conversionType}`)
+    // Check file size based on user tier
+    const tier = await getUserTier(userId)
+    const maxFileSize = tier === 'PREMIUM' ? MAX_FILE_SIZE_PREMIUM : MAX_FILE_SIZE_FREE
+    if (file.size > maxFileSize) {
+      const maxMB = Math.round(maxFileSize / (1024 * 1024))
+      return NextResponse.json(
+        { error: `File too large. Maximum size is ${maxMB}MB for ${tier.toLowerCase()} users.` },
+        { status: 400 }
+      )
+    }
+
+    console.log(`[Convert-Sync] File: ${file.name}, Type: ${conversionType}, User: ${userId || 'anonymous'}`)
 
     // Parse options
     let options: Record<string, unknown> = {}
     if (optionsStr) {
       try {
         options = JSON.parse(optionsStr)
-      } catch (e) {
+      } catch {
         // ignore parse errors
       }
     }
@@ -80,8 +115,8 @@ export async function POST(request: NextRequest) {
     await ensureDir(UPLOAD_DIR)
     const ext = path.extname(file.name)
     const inputFileName = `${randomUUID()}${ext}`
-    const inputPath = path.join(UPLOAD_DIR, inputFileName)
-    
+    inputPath = path.join(UPLOAD_DIR, inputFileName)
+
     const buffer = Buffer.from(await file.arrayBuffer())
     await fs.writeFile(inputPath, buffer)
     console.log(`[Convert-Sync] Saved input: ${inputPath}`)
@@ -97,11 +132,11 @@ export async function POST(request: NextRequest) {
 
     // Run conversion
     console.log(`[Convert-Sync] Converting...`)
-    const outputPath = await (converter as any)(inputPath, options)
+    outputPath = await (converter as any)(inputPath, options)
     console.log(`[Convert-Sync] Output: ${outputPath}`)
 
     // Read output file
-    if (!fsSync.existsSync(outputPath)) {
+    if (!outputPath || !fsSync.existsSync(outputPath)) {
       return NextResponse.json({ error: 'Conversion failed - no output file' }, { status: 500 })
     }
 
@@ -122,11 +157,16 @@ export async function POST(request: NextRequest) {
     }
     const contentType = contentTypeMap[outputExt] || 'application/octet-stream'
 
-    // Clean up input file (keep output for a bit in case of retry)
+    // Increment usage counter after successful conversion
+    await incrementUsage(userId, fingerprint, ipAddress, file.size)
+    console.log(`[Convert-Sync] Usage incremented for user: ${userId || fingerprint || ipAddress}`)
+
+    // Clean up temporary files
     try {
-      await fs.unlink(inputPath)
-    } catch (e) {
-      // ignore
+      if (inputPath) await fs.unlink(inputPath)
+      if (outputPath) await fs.unlink(outputPath)
+    } catch {
+      // ignore cleanup errors
     }
 
     console.log(`[Convert-Sync] Sending response: ${outputFileName} (${outputBuffer.length} bytes)`)
@@ -143,6 +183,15 @@ export async function POST(request: NextRequest) {
     })
   } catch (error) {
     console.error('[Convert-Sync] Error:', error)
+
+    // Clean up on error
+    try {
+      if (inputPath) await fs.unlink(inputPath)
+      if (outputPath) await fs.unlink(outputPath)
+    } catch {
+      // ignore cleanup errors
+    }
+
     return NextResponse.json(
       {
         error: 'Conversion failed',

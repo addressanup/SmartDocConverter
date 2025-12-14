@@ -1,3 +1,11 @@
+/**
+ * @deprecated This download endpoint is part of the broken async job system.
+ * The job storage is in-memory and doesn't persist on Vercel serverless.
+ * The /api/convert-sync endpoint now returns files directly in the response.
+ *
+ * TODO: Remove this file or implement persistent job storage.
+ * See /api/convert/route.ts for more details.
+ */
 import { NextRequest, NextResponse } from 'next/server'
 import fs from 'fs'
 import path from 'path'
